@@ -3,6 +3,7 @@ import type {
   FlowCreateInput,
   FlowNodeRun,
   FlowRun,
+  FlowRunStatus,
   FlowSummary,
   FlowUpdateInput
 } from '../../shared/flows-types'
@@ -25,6 +26,8 @@ export type FlowRepository = {
   appendRun(run: FlowRun): FlowRun
   /** Patch a single node's result inside an existing run. */
   updateNodeRun(runId: string, nodeRun: FlowNodeRun): FlowRun
+  /** Roll up a run's overall status once execution finishes. */
+  updateRunStatus(runId: string, status: FlowRunStatus, completedAt: number | null): FlowRun
   listRunsByFlow(flowId: string, limit?: number): FlowRun[]
   getRun(runId: string): FlowRun | undefined
   /** Retention: keep the most recent `keep` runs for a flow, evict the rest. */

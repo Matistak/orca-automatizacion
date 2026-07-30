@@ -16,7 +16,7 @@
 | 0 — Decisiones y andamiaje | ✅ Hecho | Tipos, interfaz `FlowRepository`, migraciones stub. Canvas: `@xyflow/react`. |
 | 1 — Modelo de datos y persistencia | ✅ Hecho | `JsonFlowRepository` sobre el store JSON. 22 tests · typecheck 0 · lint OK. |
 | 2 — Puente IPC/RPC y store del renderer | ✅ Hecho | IPC `flows:*`, RPC `flow.*` (zod), `window.api.flows.*`, slice `flowSlice`. typecheck 0 · lint OK · tests verdes. |
-| 3 — Motor de ejecución del DAG (MVP) | ⬜ Pendiente | |
+| 3 — Motor de ejecución del DAG (MVP) | ✅ Hecho | `FlowExecutionEngine` + validación/topo/condición/interpolación, dispatcher abstracto. 29 tests · typecheck 0 · lint OK. |
 | 4 — Editor visual de nodos (UI) | ⬜ Pendiente | Instalar `@xyflow/react` al empezar. |
 | 5 — Ejecución desde UI + observabilidad | ⬜ Pendiente | |
 | 6 — Integración con el scheduler | ⬜ Pendiente | |
@@ -180,7 +180,7 @@ coordenadas → el motor es testeable sin UI.
   - [x] `src/shared/flows-types.ts`
   - [x] `src/main/flows/flow-repository.ts` (interfaz → tipo `FlowRepository`)
   - [x] `src/main/flows/json-flow-repository.ts` (implementado en Etapa 1)
-  - [ ] `src/main/flows/flow-execution-engine.ts` (Etapa 3)
+  - [x] `src/main/flows/flow-execution-engine.ts` (Etapa 3)
   - [x] `src/main/flows/flow-schema-migrations.ts`
   - [ ] `src/renderer/src/components/flows/` (Etapa 4)
 - [x] Definir `FLOW_SCHEMA_VERSION` y stub de `migrateFlow(raw): Flow`.
@@ -255,29 +255,35 @@ coordenadas → el motor es testeable sin UI.
 
 **Objetivo:** ejecutar un flujo end-to-end. **Aquí está el MVP vertical.**
 
-- [ ] `FlowExecutionEngine` en `main`:
-  - [ ] **Validación del grafo:** detectar ciclos (rechazar — es un DAG), nodos huérfanos,
-        múltiples triggers, handles sin conectar.
-  - [ ] **Orden topológico:** resolver qué nodo corre después de cuál.
-  - [ ] **Paso de contexto:** el `output`/`exitCode` de un nodo alimenta al siguiente
-        (contexto acumulado disponible para interpolar en prompts/comandos).
-  - [ ] **Ejecución por tipo de nodo** (dispatch al renderer con el patrón `dispatchToken`):
-    - `agent-prompt` → reusa `useAutomationDispatchEvents` (extraer la lógica de lanzamiento
-      a una función reutilizable si hace falta).
-    - `shell-command` → reusa `precheck-runner.ts` (ya soporta local + SSH).
-    - `condition` → evalúa la expresión sobre el contexto, elige la arista de salida.
-  - [ ] **Manejo de estados por nodo** reusando `AutomationRunStatus`; persistir cada
-        `FlowNodeRun` con `updateNodeRun` a medida que avanza.
-  - [ ] **Fallo y corte:** un nodo fallido marca el resto como `skipped_*` según política.
-- [ ] **Estrategia incremental dentro de la etapa:**
-  1. Primero **flujo lineal** (trigger-manual → agent-prompt). Probar que funciona end-to-end.
-  2. Luego **encadenar** varios nodos (agent → shell).
-  3. Por último **branching** (nodo `condition`).
-- [ ] **Tests** del motor con dispatcher mockeado (lineal, encadenado, branching, ciclo rechazado,
-      fallo a mitad de grafo).
+- [x] `FlowExecutionEngine` en `main`:
+  - [x] **Validación del grafo:** detectar ciclos (rechazar — es un DAG), nodos huérfanos
+        (warning), múltiples triggers / sin trigger, aristas colgantes, branch faltante en
+        `condition`. → `flow-graph.ts` (`validateFlowGraph`).
+  - [x] **Orden topológico:** Kahn (`topologicalOrder`), con fallback defensivo anti-ciclo.
+  - [x] **Paso de contexto:** `output`/`exitCode` de nodos previos disponibles vía tokens
+        `{{previous.output}}` / `{{<nodeId>.output|exitCode}}`. → `flow-context-interpolation.ts`.
+  - [x] **Ejecución por tipo de nodo** detrás de un **dispatcher abstracto** (`FlowNodeDispatcher`)
+        — testeable sin renderer/shell. El wiring real (`useAutomationDispatchEvents`,
+        `precheck-runner.ts`, `dispatchToken`, `flows:runNow`) se hace en Etapa 5.
+    - `agent-prompt` / `shell-command` → `dispatcher.dispatchNode` (config ya interpolada).
+    - `condition` → evaluado en el motor (`flow-condition.ts`), activa solo la arista `true`/`false`.
+  - [x] **Manejo de estados por nodo** reusando `AutomationRunStatus`; `updateNodeRun` a medida
+        que avanza + nuevo `updateRunStatus` en el repo para el roll-up final del `FlowRun`.
+  - [x] **Fallo y corte:** un nodo fallido deja sus aristas de salida "muertas" → los sucesores
+        no se activan y se persisten como `skipped_unavailable`; el run queda `failed`.
+- [x] **Estrategia incremental dentro de la etapa:** lineal → encadenado (agent→shell con
+      interpolación) → branching (`condition`), todo cubierto por tests.
+- [x] **Tests** del motor con dispatcher scripteado sobre el `JsonFlowRepository` real
+      (lineal, encadenado+interpolación, branching true/false, ciclo rechazado, fallo a mitad
+      de grafo, snapshot inmutable) + tests de `flow-graph`.
 
 **Entregable:** ejecutar un flujo manual desde el backend y ver los `FlowNodeRun` persistidos.
-**Este es el momento de "probar que funciona" antes de invertir en UI.**
+✅ **HECHO** (29 tests verdes · typecheck node 0 · lint limpio)
+
+**Archivos tocados:**
+- `src/main/flows/flow-execution-engine.ts` (+ `.test.ts`), `flow-graph.ts` (+ `.test.ts`),
+  `flow-condition.ts`, `flow-context-interpolation.ts`, `flow-node-dispatcher.ts`
+- `src/main/flows/flow-repository.ts` + `json-flow-repository.ts` (nuevo `updateRunStatus`)
 
 ---
 

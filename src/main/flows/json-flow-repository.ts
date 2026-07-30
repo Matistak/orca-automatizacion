@@ -5,6 +5,7 @@ import {
   type FlowCreateInput,
   type FlowNodeRun,
   type FlowRun,
+  type FlowRunStatus,
   type FlowSummary,
   type FlowUpdateInput
 } from '../../shared/flows-types'
@@ -111,6 +112,19 @@ export class JsonFlowRepository implements FlowRepository {
       ? current.nodeRuns.map((entry) => (entry.nodeId === nodeRun.nodeId ? nodeRun : entry))
       : [...current.nodeRuns, nodeRun]
     const updated: FlowRun = { ...current, nodeRuns }
+    const next = [...runs]
+    next[index] = updated
+    this.backend.writeFlowRuns(next)
+    return updated
+  }
+
+  updateRunStatus(runId: string, status: FlowRunStatus, completedAt: number | null): FlowRun {
+    const runs = this.backend.readFlowRuns()
+    const index = runs.findIndex((run) => run.id === runId)
+    if (index === -1) {
+      throw new Error('Flow run not found.')
+    }
+    const updated: FlowRun = { ...runs[index]!, status, completedAt }
     const next = [...runs]
     next[index] = updated
     this.backend.writeFlowRuns(next)

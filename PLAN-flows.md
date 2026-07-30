@@ -17,7 +17,7 @@
 | 1 — Modelo de datos y persistencia | ✅ Hecho | `JsonFlowRepository` sobre el store JSON. 22 tests · typecheck 0 · lint OK. |
 | 2 — Puente IPC/RPC y store del renderer | ✅ Hecho | IPC `flows:*`, RPC `flow.*` (zod), `window.api.flows.*`, slice `flowSlice`. typecheck 0 · lint OK · tests verdes. |
 | 3 — Motor de ejecución del DAG (MVP) | ✅ Hecho | `FlowExecutionEngine` + validación/topo/condición/interpolación, dispatcher abstracto. 29 tests · typecheck 0 · lint OK. |
-| 4 — Editor visual de nodos (UI) | ⬜ Pendiente | Instalar `@xyflow/react` al empezar. |
+| 4 — Editor visual de nodos (UI) | ✅ Hecho | `@xyflow/react` instalado. Vista `flows` cableada, canvas + paleta + inspector + autosave + validación en vivo. `flow-graph` movido a `shared/`. typecheck (node/cli/web) 0 · lint OK. |
 | 5 — Ejecución desde UI + observabilidad | ⬜ Pendiente | |
 | 6 — Integración con el scheduler | ⬜ Pendiente | |
 | 7 — Preparación SQLite + pulido | ⬜ Pendiente | |
@@ -182,7 +182,7 @@ coordenadas → el motor es testeable sin UI.
   - [x] `src/main/flows/json-flow-repository.ts` (implementado en Etapa 1)
   - [x] `src/main/flows/flow-execution-engine.ts` (Etapa 3)
   - [x] `src/main/flows/flow-schema-migrations.ts`
-  - [ ] `src/renderer/src/components/flows/` (Etapa 4)
+  - [x] `src/renderer/src/components/flows/` (Etapa 4)
 - [x] Definir `FLOW_SCHEMA_VERSION` y stub de `migrateFlow(raw): Flow`.
 
 **Entregable:** estructura + tipos + interfaz. Nada funcional aún. ✅ **HECHO**
@@ -291,17 +291,40 @@ coordenadas → el motor es testeable sin UI.
 
 **Objetivo:** construir/editar flujos visualmente. Ver sección **Diseño UI/UX** abajo.
 
-- [ ] Ruta/vista nueva `FlowsPage.tsx` (patrón `AutomationsPage.tsx`), entrada en `SidebarNav.tsx`.
-- [ ] Lista de flujos (`FlowList.tsx`): cards con nombre, estado (enabled), último run, próximo run.
-- [ ] Canvas del editor (`FlowCanvas.tsx`): pan/zoom, arrastrar nodos, conectar handles.
-- [ ] Nodos custom (`nodes/`): un componente por `kind`, siguiendo el look monocromo.
-- [ ] Paleta de nodos (`NodePalette.tsx`): arrastrar-para-crear.
-- [ ] Panel de inspección (`NodeInspector.tsx`): editar el `config` del nodo seleccionado
-      (reutilizar los campos existentes: `AutomationSchedulePicker`, `AutomationPrecheckFields`,
-      `AutomationSessionField`, combobox de workspace/proyecto).
-- [ ] Autosave + estado dirty; validación en vivo (nodos sin conectar, sin trigger).
+- [x] Ruta/vista nueva `FlowsPage.tsx`, entrada en `SidebarNav.tsx`. Vista `flows` cableada en
+      `TopLevelView`, `top-level-view.ts`, `ui.ts` (`openFlowsPage`/`closeFlowsPage`/
+      `previousViewBeforeFlows`), `worktree-nav-history.ts`, `worktree-activation.ts`,
+      `right-sidebar-visibility.ts`, `resolve-zoom-target.ts`, `client-ui-schemas.ts`, `App.tsx`.
+- [x] Lista de flujos (`FlowList.tsx`): cards con nombre, nº de nodos y estado (enabled).
+      _Último/próximo run se muestran en Etapa 5 (requieren runs/scheduler)._
+- [x] Canvas del editor (`FlowCanvas.tsx`) con `@xyflow/react`: pan/zoom, arrastrar nodos,
+      conectar handles, minimap/controls, drag-drop desde paleta, borrar con Delete/Backspace.
+- [x] Nodo custom (`FlowNodeCard.tsx`): un card por `kind` (icono lucide monocromo, preview de
+      config, doble handle `true`/`false` en `condition`, halo `ring` al seleccionar,
+      borde `destructive` si inválido).
+- [x] Paleta de nodos (`NodePalette.tsx`): arrastrar-para-crear + click-para-añadir.
+- [x] Panel de inspección (`NodeInspector.tsx`): editar el `config` por `kind`. Reutiliza
+      `AutomationSchedulePicker` (vía `FlowScheduleField`, adaptando rrule↔draft) y
+      `WorkspaceCombobox`. _`AutomationPrecheckFields`/`AutomationSessionField` no aplican al
+      modelo de nodos actual; se evaluará su reuso en Etapa 5._
+- [x] Autosave con debounce (700ms) + indicador dirty/saving/saved; validación en vivo con
+      `validateFlowGraph` (movido a `src/shared/flow-graph.ts` para reuso main+renderer) y banner
+      de errores no-bloqueante.
 
-**Entregable:** crear y guardar un flujo completo desde la UI.
+**Entregable:** crear y guardar un flujo completo desde la UI. ✅ **HECHO**
+(typecheck node/cli/web 0 · lint OK · tests de `flow-graph` verdes tras el move)
+
+**Archivos tocados:**
+- `src/renderer/src/components/flows/` (nuevo): `FlowsPage.tsx`, `flows-page-parts.tsx`,
+  `FlowList.tsx`, `FlowCanvas.tsx`, `flow-canvas-theme.css`, `FlowNodeCard.tsx`, `NodePalette.tsx`,
+  `NodeInspector.tsx`, `FlowScheduleField.tsx`, `flow-node-presentation.ts`
+- Wiring de vista: `src/shared/types.ts`, `src/shared/top-level-view.ts`,
+  `src/renderer/src/store/slices/ui.ts`, `store/slices/worktree-nav-history.ts`,
+  `src/renderer/src/lib/worktree-activation.ts`, `lib/right-sidebar-visibility.ts`,
+  `hooks/resolve-zoom-target.ts`, `components/sidebar/SidebarNav.tsx`, `App.tsx`,
+  `src/main/runtime/rpc/methods/client-ui-schemas.ts`
+- Refactor: `src/main/flows/flow-graph.ts` → re-export desde `src/shared/flow-graph.ts`
+- Dependencia: `@xyflow/react`
 
 ---
 

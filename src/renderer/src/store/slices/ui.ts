@@ -609,6 +609,7 @@ export type UISlice = {
     | 'settings'
     | 'activity'
     | 'automations'
+    | 'flows'
     | 'space'
     | 'skills'
     | 'mobile'
@@ -617,6 +618,7 @@ export type UISlice = {
     | 'tasks'
     | 'activity'
     | 'automations'
+    | 'flows'
     | 'space'
     | 'skills'
     | 'mobile'
@@ -625,6 +627,7 @@ export type UISlice = {
     | 'settings'
     | 'tasks'
     | 'automations'
+    | 'flows'
     | 'space'
     | 'skills'
     | 'mobile'
@@ -633,6 +636,16 @@ export type UISlice = {
     | 'settings'
     | 'tasks'
     | 'activity'
+    | 'flows'
+    | 'space'
+    | 'skills'
+    | 'mobile'
+  previousViewBeforeFlows:
+    | 'terminal'
+    | 'settings'
+    | 'tasks'
+    | 'activity'
+    | 'automations'
     | 'space'
     | 'skills'
     | 'mobile'
@@ -642,6 +655,7 @@ export type UISlice = {
     | 'tasks'
     | 'activity'
     | 'automations'
+    | 'flows'
     | 'skills'
     | 'mobile'
   previousViewBeforeSkills:
@@ -650,6 +664,7 @@ export type UISlice = {
     | 'tasks'
     | 'activity'
     | 'automations'
+    | 'flows'
     | 'space'
     | 'mobile'
   previousViewBeforeMobile:
@@ -658,6 +673,7 @@ export type UISlice = {
     | 'tasks'
     | 'activity'
     | 'automations'
+    | 'flows'
     | 'space'
     | 'skills'
   setActiveView: (view: UISlice['activeView']) => void
@@ -730,6 +746,8 @@ export type UISlice = {
   ) => void
   openAutomationsPage: () => void
   closeAutomationsPage: () => void
+  openFlowsPage: () => void
+  closeFlowsPage: () => void
   openSpacePage: () => void
   closeSpacePage: () => void
   openSkillsPage: () => void
@@ -1223,6 +1241,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   previousViewBeforeSettings: 'terminal',
   previousViewBeforeActivity: 'terminal',
   previousViewBeforeAutomations: 'terminal',
+  previousViewBeforeFlows: 'terminal',
   previousViewBeforeSpace: 'terminal',
   previousViewBeforeSkills: 'terminal',
   previousViewBeforeMobile: 'terminal',
@@ -1446,6 +1465,29 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
       }
       return {
         activeView: state.previousViewBeforeAutomations,
+        worktreeNavHistoryIndex: nextHistoryIndex
+      }
+    }),
+  openFlowsPage: () => {
+    get().recordViewVisit('flows')
+    set((state) => ({
+      activeView: 'flows',
+      previousViewBeforeFlows:
+        state.activeView === 'flows' ? state.previousViewBeforeFlows : state.activeView
+    }))
+  },
+  closeFlowsPage: () =>
+    set((state) => {
+      const currentEntry = state.worktreeNavHistory[state.worktreeNavHistoryIndex]
+      let nextHistoryIndex = state.worktreeNavHistoryIndex
+      if (currentEntry === 'flows') {
+        const prev = findPrevLiveWorktreeHistoryIndex(state)
+        if (prev !== null) {
+          nextHistoryIndex = prev
+        }
+      }
+      return {
+        activeView: state.previousViewBeforeFlows,
         worktreeNavHistoryIndex: nextHistoryIndex
       }
     }),

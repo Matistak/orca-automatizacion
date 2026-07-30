@@ -348,6 +348,15 @@
               "windowsPathUnknown": "Orca could not check your Windows user PATH"
             }
           }
+        },
+        "background": {
+          "session": {
+            "test": {
+              "state": {
+                "d9fa6e0979": "Terminal 1"
+              }
+            }
+          }
         }
       },
       "ensure": {
@@ -4202,7 +4211,8 @@
           "196c1b5362": "GitLab 작업 열기",
           "0ccba862b8": "GitHub 작업 열기",
           "fee535205b": "작업",
-          "d599269755": "사이드바에서 숨기기"
+          "d599269755": "사이드바에서 숨기기",
+          "flows": "Flows"
         },
         "SidebarRepositoryFilterSection": {
           "d3a9c4cea1": "지우기",
@@ -7587,7 +7597,12 @@
             "d6c0a9e2f4": "grok",
             "c5b9f8d1e3": "xai",
             "usagePercentageDisplayTitle": "사용량 백분율",
-            "usagePercentageDisplayDescription": "공급자 한도를 사용한 비율 또는 남은 비율로 표시할지 선택합니다."
+            "usagePercentageDisplayDescription": "공급자 한도를 사용한 비율 또는 남은 비율로 표시할지 선택합니다.",
+            "3a0e3a9fdc": "Idioma",
+            "5f4779d525": "言語",
+            "0b03f507c2": "언어",
+            "ab96f8a4b9": "語言",
+            "b6035a3def": "语言"
           }
         },
         "auto": {
@@ -8882,6 +8897,22 @@
               "7c7056940a": "셸",
               "713c4a2f92": "Windows의 새 terminal 패널에 대한 기본 셸을 선택합니다.",
               "13715f9d23": "기본 쉘"
+            }
+          },
+          "advanced": {
+            "platform": {
+              "search": {
+                "7d383cc610": "ghostty",
+                "77faf8be39": "Ghostty"
+              }
+            }
+          },
+          "pane": {
+            "appearance": {
+              "search": {
+                "1f4decdd74": "ghostty",
+                "e0cc1b7b47": "Ghostty"
+              }
             }
           }
         },
@@ -14046,6 +14077,89 @@
       "terminalPane": {
         "useManualTerminalWorktreeParking": {
           "cannotPark": "These terminals cannot be parked safely."
+        }
+      },
+      "flows": {
+        "FlowList": {
+          "89c8ee72ae": "nodes",
+          "9927e9a59e": "node",
+          "9df10f2520": "Off",
+          "6db4910b1b": "No flows yet. Create one to get started."
+        },
+        "FlowNodeCard": {
+          "1bd5a7678e": "false",
+          "848be47462": "true"
+        },
+        "FlowScheduleField": {
+          "2465676bae": "Schedule"
+        },
+        "FlowsPage": {
+          "59f683f974": "Select a node to edit it, or drag one from the palette.",
+          "e2215cec19": "Failed to delete flow",
+          "7838f45ff5": "Failed to create flow",
+          "3e20835f66": "Failed to save flow"
+        },
+        "NodeInspector": {
+          "815ee41877": "handles to the nodes that should run for each outcome.",
+          "cd5a418e3b": "false",
+          "c041575875": "and",
+          "04909be122": "true",
+          "16b24dd46d": "Connect the",
+          "1de8290a7d": "PASS",
+          "b8f9b7250f": "Substring",
+          "c5d810b9ba": "Equals",
+          "94d3a82151": "Previous output contains",
+          "d5120e8a54": "Previous exit code",
+          "3c76ea2c03": "Branch on",
+          "f1c90909d0": "Timeout (seconds)",
+          "6134d3963b": "npm test",
+          "4bc45d9209": "Command",
+          "171962b508": "main",
+          "36d8ae3178": "Base branch (optional)",
+          "0ba1b86a57": "Target workspace",
+          "6f087906c3": "Existing workspace",
+          "d339acbb4a": "New workspace per run",
+          "19137dff8d": "Workspace",
+          "d546b22080": "Review the recent changes and summarize any risks.",
+          "40c692ef3b": "Prompt",
+          "db52cbdc6a": "Agent",
+          "363268c9ca": "This flow runs when you click “Run now”. No configuration needed.",
+          "af4b6c472c": "Label",
+          "dea86daf79": "Delete node"
+        },
+        "NodePalette": {
+          "5204a981d9": "Nodes"
+        },
+        "flow": {
+          "node": {
+            "presentation": {
+              "e019c0d582": "Branch on the previous node result.",
+              "2eee86d56a": "Condition",
+              "077baa943d": "Run a shell command (local or SSH).",
+              "79d41cb149": "Shell command",
+              "0d4b0c7865": "Run a coding agent with a prompt.",
+              "e75b30e1ef": "Agent prompt",
+              "f5aafd203e": "Run the flow on a recurring schedule.",
+              "2a6e380359": "Schedule trigger",
+              "8926d60e5c": "Entry point for a flow you run on demand.",
+              "7f72256204": "Manual trigger"
+            }
+          }
+        },
+        "flows": {
+          "page": {
+            "parts": {
+              "5e7f6d1c63": "New flow",
+              "6104665060": "No flows yet.",
+              "71640a4d34": "Select a flow to edit it.",
+              "71db7887f1": "Saved",
+              "7071a51cef": "Unsaved changes",
+              "d01e1244c3": "Saving…",
+              "1dfd976b28": "Close",
+              "2b932e6556": "Enabled",
+              "da54929a93": "Flows"
+            }
+          }
         }
       }
     },

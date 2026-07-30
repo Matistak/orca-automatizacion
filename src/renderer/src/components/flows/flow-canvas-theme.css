@@ -1,0 +1,65 @@
+/* Monochrome overrides for React Flow so the canvas matches Orca's quiet,
+ * token-driven look instead of the library's default blue palette. */
+
+.orca-flow-canvas {
+  --xy-background-color: var(--background);
+  --xy-edge-stroke: var(--border);
+  --xy-edge-stroke-selected: var(--ring);
+  --xy-connectionline-stroke: var(--ring);
+  --xy-handle-background-color: var(--card);
+  --xy-handle-border-color: var(--border);
+  --xy-attribution-background-color: transparent;
+  background: var(--background);
+}
+
+.orca-flow-canvas .react-flow__attribution {
+  display: none;
+}
+
+.orca-flow-canvas .react-flow__handle {
+  width: 9px;
+  height: 9px;
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+
+.orca-flow-canvas .react-flow__handle-connecting {
+  border-color: var(--ring);
+}
+
+.orca-flow-canvas .react-flow__edge-path {
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+
+.orca-flow-canvas .react-flow__edge.selected .react-flow__edge-path,
+.orca-flow-canvas .react-flow__edge:focus .react-flow__edge-path {
+  stroke: var(--ring);
+}
+
+.orca-flow-canvas .react-flow__controls {
+  box-shadow: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.orca-flow-canvas .react-flow__controls-button {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  color: var(--card-foreground);
+}
+
+.orca-flow-canvas .react-flow__controls-button:hover {
+  background: var(--accent);
+}
+
+.orca-flow-canvas .react-flow__controls-button svg {
+  fill: currentColor;
+}
+
+.orca-flow-canvas .react-flow__minimap {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}

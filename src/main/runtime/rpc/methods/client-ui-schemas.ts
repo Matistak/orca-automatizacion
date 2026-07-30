@@ -189,6 +189,7 @@ const UiUpdateFields = z
         'tasks',
         'activity',
         'automations',
+        'flows',
         'space',
         'skills',
         'mobile'

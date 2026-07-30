@@ -3273,6 +3273,7 @@ export type TopLevelView =
   | 'tasks'
   | 'activity'
   | 'automations'
+  | 'flows'
   | 'space'
   | 'skills'
   | 'mobile'

@@ -515,6 +515,13 @@ import type {
   AutomationUpdateInput
 } from '../shared/automations-types'
 import type {
+  Flow,
+  FlowCreateInput,
+  FlowRun,
+  FlowSummary,
+  FlowUpdateInput
+} from '../shared/flows-types'
+import type {
   WorkspaceCleanupDismissArgs,
   WorkspaceCleanupLocalProcessArgs,
   WorkspaceCleanupLocalProcessResult,
@@ -3436,6 +3443,14 @@ export type PreloadApi = {
     snapshotWorkspaceName: (args: { workspaceId: string; displayName: string }) => Promise<number>
     rendererReady: () => Promise<void>
     onDispatchRequested: (callback: (request: AutomationDispatchRequest) => void) => () => void
+  }
+  flows: {
+    list: () => Promise<FlowSummary[]>
+    get: (args: { id: string }) => Promise<Flow | undefined>
+    create: (input: FlowCreateInput) => Promise<Flow>
+    update: (args: { id: string; updates: FlowUpdateInput }) => Promise<Flow>
+    delete: (args: { id: string }) => Promise<void>
+    listRuns: (args: { flowId: string; limit?: number }) => Promise<FlowRun[]>
   }
   wsl: {
     isAvailable: () => Promise<boolean>

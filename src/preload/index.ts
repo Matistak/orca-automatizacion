@@ -226,6 +226,13 @@ import type {
   AutomationPrecheckResult,
   AutomationUpdateInput
 } from '../shared/automations-types'
+import type {
+  Flow,
+  FlowCreateInput,
+  FlowRun,
+  FlowSummary,
+  FlowUpdateInput
+} from '../shared/flows-types'
 import type { KeybindingActionId, KeybindingFileSnapshot } from '../shared/keybindings'
 import type { AiVaultListArgs, AiVaultSubagentListArgs } from '../shared/ai-vault-types'
 import type { AiVaultPrepareSessionResumeArgs } from '../shared/ai-vault-resume-preparation'
@@ -4526,6 +4533,17 @@ const api = {
       ipcRenderer.on('automations:dispatchRequested', listener)
       return () => ipcRenderer.removeListener('automations:dispatchRequested', listener)
     }
+  },
+
+  flows: {
+    list: (): Promise<FlowSummary[]> => ipcRenderer.invoke('flows:list'),
+    get: (args: { id: string }): Promise<Flow | undefined> => ipcRenderer.invoke('flows:get', args),
+    create: (input: FlowCreateInput): Promise<Flow> => ipcRenderer.invoke('flows:create', input),
+    update: (args: { id: string; updates: FlowUpdateInput }): Promise<Flow> =>
+      ipcRenderer.invoke('flows:update', args),
+    delete: (args: { id: string }): Promise<void> => ipcRenderer.invoke('flows:delete', args),
+    listRuns: (args: { flowId: string; limit?: number }): Promise<FlowRun[]> =>
+      ipcRenderer.invoke('flows:listRuns', args)
   },
 
   e2e: {

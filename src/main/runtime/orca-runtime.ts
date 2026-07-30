@@ -462,6 +462,15 @@ import {
 } from '../ports/workspace-port-ownership'
 import { advertisedUrlWatcher } from '../ports/advertised-url-watcher'
 import type { AutomationService } from '../automations/service'
+import { JsonFlowRepository } from '../flows/json-flow-repository'
+import type { FlowStoreBackend } from '../flows/flow-store-backend'
+import type {
+  Flow,
+  FlowCreateInput,
+  FlowRun,
+  FlowSummary,
+  FlowUpdateInput
+} from '../../shared/flows-types'
 import { RuntimeBrowserCommands } from './orca-runtime-browser'
 import { RemoteRuntimeTerminalCreateIdempotency } from './remote-runtime-terminal-create-idempotency'
 import { deriveRemoteRuntimeTerminalCreateHandle } from './remote-runtime-terminal-create-identity'
@@ -1041,6 +1050,10 @@ type RuntimeStore = {
   createAutomation?: Store['createAutomation']
   updateAutomation?: Store['updateAutomation']
   deleteAutomation?: Store['deleteAutomation']
+  readFlows?: Store['readFlows']
+  writeFlows?: Store['writeFlows']
+  readFlowRuns?: Store['readFlowRuns']
+  writeFlowRuns?: Store['writeFlowRuns']
   getSparsePresets?: Store['getSparsePresets']
   saveSparsePreset?: Store['saveSparsePreset']
   getMobileClientTabSelections?: Store['getMobileClientTabSelections']
@@ -3527,6 +3540,54 @@ export class OrcaRuntimeService {
       throw new Error('runtime_unavailable')
     }
     return await this.automationService.runNow(id)
+  }
+
+  // ── Flows (node-flow editor) ──────────────────────────────────────
+  // Why: lazily built over the same store slots JsonFlowRepository needs, so
+  // remote/headless hosts share the local IPC repository's exact behaviour.
+  private flowRepository: JsonFlowRepository | null = null
+
+  private getFlowRepository(): JsonFlowRepository {
+    if (!this.store?.readFlows) {
+      throw new Error('runtime_unavailable')
+    }
+    if (!this.flowRepository) {
+      this.flowRepository = new JsonFlowRepository(this.store as unknown as FlowStoreBackend)
+    }
+    return this.flowRepository
+  }
+
+  listFlows(): FlowSummary[] {
+    return this.getFlowRepository().listFlowSummaries()
+  }
+
+  getFlow(id: string): Flow {
+    const flow = this.getFlowRepository().getFlow(id)
+    if (!flow) {
+      throw new Error('Flow not found.')
+    }
+    return flow
+  }
+
+  createFlow(input: FlowCreateInput): Flow {
+    return this.getFlowRepository().createFlow(input)
+  }
+
+  updateFlow(id: string, updates: FlowUpdateInput): Flow {
+    return this.getFlowRepository().updateFlow(id, updates)
+  }
+
+  deleteFlow(id: string): { removed: boolean; id: string } {
+    const repository = this.getFlowRepository()
+    if (!repository.getFlow(id)) {
+      throw new Error('Flow not found.')
+    }
+    repository.deleteFlow(id)
+    return { removed: true, id }
+  }
+
+  listFlowRuns(flowId: string, limit?: number): FlowRun[] {
+    return this.getFlowRepository().listRunsByFlow(flowId, limit)
   }
 
   private async resolveAutomationTarget(

@@ -15,7 +15,7 @@
 |-------|--------|-------|
 | 0 — Decisiones y andamiaje | ✅ Hecho | Tipos, interfaz `FlowRepository`, migraciones stub. Canvas: `@xyflow/react`. |
 | 1 — Modelo de datos y persistencia | ✅ Hecho | `JsonFlowRepository` sobre el store JSON. 22 tests · typecheck 0 · lint OK. |
-| 2 — Puente IPC/RPC y store del renderer | ⬜ Pendiente | |
+| 2 — Puente IPC/RPC y store del renderer | ✅ Hecho | IPC `flows:*`, RPC `flow.*` (zod), `window.api.flows.*`, slice `flowSlice`. typecheck 0 · lint OK · tests verdes. |
 | 3 — Motor de ejecución del DAG (MVP) | ⬜ Pendiente | |
 | 4 — Editor visual de nodos (UI) | ⬜ Pendiente | Instalar `@xyflow/react` al empezar. |
 | 5 — Ejecución desde UI + observabilidad | ⬜ Pendiente | |
@@ -227,14 +227,27 @@ coordenadas → el motor es testeable sin UI.
 
 **Objetivo:** el renderer puede hablar con el repositorio.
 
-- [ ] Handlers IPC en `src/main/ipc/flows.ts` (patrón `ipc/automations.ts`):
-      `flows:list/get/create/update/delete`, `flows:listRuns`, `flows:runNow`.
-- [ ] Métodos RPC en `src/main/runtime/rpc/methods/flows.ts` con validación **zod**
-      (patrón `rpc/methods/automations.ts`) — necesario para hosts remotos/headless.
-- [ ] Exponer en `src/preload/index.ts` (`window.api.flows.*`).
-- [ ] Slice de store en el renderer (patrón de las slices existentes en `store/slices/`).
+- [x] Handlers IPC en `src/main/ipc/flows.ts` (patrón `ipc/automations.ts`):
+      `flows:list/get/create/update/delete`, `flows:listRuns`. `flows:runNow` se difiere a la
+      Etapa 3 (necesita el motor de ejecución). Registrados en `register-core-handlers.ts`.
+- [x] Métodos RPC en `src/main/runtime/rpc/methods/flows.ts` con validación **zod**
+      (unión discriminada de `FlowNodeConfig`) — registrados en el manifiesto `ALL_RPC_METHODS`.
+      Delegan en nuevos métodos del `OrcaRuntime` (`listFlows/getFlow/createFlow/updateFlow/
+      deleteFlow/listFlowRuns`) que construyen un `JsonFlowRepository` sobre los slots del store.
+- [x] Expuesto en `src/preload/index.ts` + `api-types.ts` (`window.api.flows.*`).
+- [x] Slice `flowSlice` (`store/slices/flows.ts`) cableado en `store/index.ts`, `types.ts` y los
+      helpers de test de store.
 
 **Entregable:** CRUD de flujos accesible desde el renderer (aún sin UI de canvas ni ejecución).
+✅ **HECHO** (typecheck 0 · lint OK · tests RPC + store cascades verdes)
+
+**Archivos tocados:**
+- `src/main/ipc/flows.ts` (nuevo), `src/main/ipc/register-core-handlers.ts`
+- `src/main/runtime/rpc/methods/flows.ts` (+ `.test.ts`), `src/main/runtime/rpc/methods/index.ts`
+- `src/main/runtime/orca-runtime.ts` (slots de store + métodos de flows)
+- `src/preload/index.ts`, `src/preload/api-types.ts`
+- `src/renderer/src/store/slices/flows.ts` (nuevo), `store/index.ts`, `store/types.ts`,
+  `store/slices/store-test-helpers.ts`, `store/slices/diffComments.test.ts`
 
 ---
 

@@ -106,7 +106,6 @@ validation-screenshots/
 # Local scratch notes and PR evidence screenshots (not part of the product).
 /notes/
 /pr-evidence/
-/PLAN-*.md
 
 # Playwright
 test-results/

@@ -34,6 +34,7 @@ const NodeConfig = z.discriminatedUnion('kind', [
     agentId: TuiAgent,
     prompt: requiredString('Missing prompt'),
     workspaceMode: WorkspaceMode,
+    projectId: NullableString,
     workspaceId: NullableString,
     baseBranch: NullableString,
     setupDecision: SetupDecision,
@@ -42,7 +43,9 @@ const NodeConfig = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('shell-command'),
     command: requiredString('Missing command'),
-    timeoutSeconds: requiredNumber('Missing timeout')
+    timeoutSeconds: requiredNumber('Missing timeout'),
+    workspaceId: NullableString,
+    failOnNonZeroExit: z.boolean().optional()
   }),
   z.object({ kind: z.literal('condition'), expression: ConditionExpression })
 ])

@@ -19,7 +19,13 @@ const trigger: FlowNode = { id: 't', config: { kind: 'trigger-manual' }, positio
 function agent(id: string): FlowNode {
   return {
     id,
-    config: { kind: 'agent-prompt', agentId: 'claude', prompt: 'p', workspaceMode: 'new_per_run' },
+    config: {
+      kind: 'agent-prompt',
+      agentId: 'claude',
+      prompt: 'p',
+      workspaceMode: 'new_per_run',
+      projectId: 'repo-1'
+    },
     position: { x: 0, y: 0 }
   }
 }
@@ -66,6 +72,32 @@ describe('validateFlowGraph', () => {
       )
     )
     expect(v.errors.some((e) => e.code === 'cycle')).toBe(true)
+  })
+
+  it('errors when an agent node has no project for its new workspace', () => {
+    const node: FlowNode = {
+      id: 'a',
+      config: {
+        kind: 'agent-prompt',
+        agentId: 'claude',
+        prompt: 'p',
+        workspaceMode: 'new_per_run'
+      },
+      position: { x: 0, y: 0 }
+    }
+    const v = validateFlowGraph(flow([trigger, node], [{ id: 'e', source: 't', target: 'a' }]))
+    expect(v.ok).toBe(false)
+    expect(v.errors.some((e) => e.code === 'missing_project' && e.nodeId === 'a')).toBe(true)
+  })
+
+  it('errors on a shell node with no command', () => {
+    const node: FlowNode = {
+      id: 's',
+      config: { kind: 'shell-command', command: '  ', timeoutSeconds: 60 },
+      position: { x: 0, y: 0 }
+    }
+    const v = validateFlowGraph(flow([trigger, node], [{ id: 'e', source: 't', target: 's' }]))
+    expect(v.errors.some((e) => e.code === 'missing_command')).toBe(true)
   })
 
   it('warns on an unreachable node', () => {

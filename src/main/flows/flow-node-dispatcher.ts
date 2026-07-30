@@ -15,6 +15,9 @@ export type FlowNodeResult = {
   output: AutomationRunOutputSnapshot | null
   usage: AutomationRunUsage | null
   exitCode: number | null
+  /** Workspace the node ran in; downstream shell nodes inherit it. */
+  workspaceId: string | null
+  workspaceDisplayName: string | null
   terminalSessionId: string | null
   terminalPaneKey: string | null
   terminalPtyId: string | null
@@ -23,7 +26,11 @@ export type FlowNodeResult = {
 
 /** Accumulated results of already-executed nodes, keyed by node id. */
 export type FlowExecutionContext = {
+  flowId: string
+  flowName: string
   flowRunId: string
+  runNumber: number | null
+  trigger: 'scheduled' | 'manual'
   results: ReadonlyMap<string, FlowNodeResult>
   /** The most recently executed node, for `{{previous.*}}` interpolation. */
   previousNodeId: string | null

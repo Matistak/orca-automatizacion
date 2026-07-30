@@ -16,6 +16,7 @@ export type FlowSlice = {
   updateFlow: (id: string, updates: FlowUpdateInput) => Promise<Flow>
   deleteFlow: (id: string) => Promise<void>
   listFlowRuns: (flowId: string, limit?: number) => Promise<FlowRun[]>
+  runFlowNow: (flowId: string) => Promise<FlowRun>
 }
 
 export const createFlowSlice: StateCreator<AppState, [], [], FlowSlice> = (set) => ({
@@ -49,7 +50,13 @@ export const createFlowSlice: StateCreator<AppState, [], [], FlowSlice> = (set) 
     await refreshFlowSummaries(set)
   },
 
-  listFlowRuns: async (flowId, limit) => window.api.flows.listRuns({ flowId, limit })
+  listFlowRuns: async (flowId, limit) => window.api.flows.listRuns({ flowId, limit }),
+
+  runFlowNow: async (flowId) => {
+    const run = await window.api.flows.runNow({ flowId })
+    await refreshFlowSummaries(set)
+    return run
+  }
 })
 
 // Why: refresh the index after any mutation so summaries stay in sync without

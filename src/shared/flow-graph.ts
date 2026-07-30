@@ -64,6 +64,35 @@ function detectCycle(flow: Flow): string[] | null {
   return null
 }
 
+/** Config-level errors that would only surface as a failed node at run time. */
+function validateNodeConfig(node: FlowNode): FlowGraphIssue[] {
+  const issues: FlowGraphIssue[] = []
+  const config = node.config
+  if (config.kind === 'agent-prompt') {
+    if (!config.prompt.trim()) {
+      issues.push({ code: 'missing_prompt', message: 'Agent node has no prompt.', nodeId: node.id })
+    }
+    if (config.workspaceMode === 'new_per_run' && !config.projectId) {
+      issues.push({
+        code: 'missing_project',
+        message: 'Agent node has no project to create its workspace in.',
+        nodeId: node.id
+      })
+    }
+    if (config.workspaceMode === 'existing' && !config.workspaceId) {
+      issues.push({
+        code: 'missing_workspace',
+        message: 'Agent node has no target workspace.',
+        nodeId: node.id
+      })
+    }
+  }
+  if (config.kind === 'shell-command' && !config.command.trim()) {
+    issues.push({ code: 'missing_command', message: 'Shell node has no command.', nodeId: node.id })
+  }
+  return issues
+}
+
 /**
  * Validate a flow graph before execution. A flow is a DAG with exactly one
  * trigger; cycles, missing/extra triggers, and dangling edges are hard errors.
@@ -102,6 +131,12 @@ export function validateFlowGraph(flow: Flow): FlowGraphValidation {
           nodeId: node.id
         })
       }
+    }
+  }
+
+  for (const node of flow.nodes) {
+    for (const issue of validateNodeConfig(node)) {
+      errors.push(issue)
     }
   }
 

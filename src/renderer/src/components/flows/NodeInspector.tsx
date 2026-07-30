@@ -20,6 +20,8 @@ import { cn } from '@/lib/utils'
 import { getAgentCatalog } from '@/lib/agent-catalog'
 import { useAppStore } from '@/store'
 import { WorkspaceCombobox } from '@/components/automations/WorkspaceCombobox'
+import AutomationProjectCombobox from '@/components/automations/AutomationProjectCombobox'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Field } from '@/components/automations/automation-page-parts'
 import { getFlowNodeKindMeta } from './flow-node-presentation'
 import { FlowScheduleField } from './FlowScheduleField'
@@ -119,6 +121,7 @@ function AgentPromptFields({
   onConfigChange: (config: FlowNodeConfig) => void
 }): React.JSX.Element {
   const worktreesByRepo = useAppStore((s) => s.worktreesByRepo)
+  const repos = useAppStore((s) => s.repos)
   const agents = useMemo(() => getAgentCatalog(), [])
   const allWorktrees = useMemo(() => Object.values(worktreesByRepo).flat(), [worktreesByRepo])
 
@@ -172,6 +175,16 @@ function AgentPromptFields({
           </SelectContent>
         </Select>
       </Field>
+      {config.workspaceMode === 'new_per_run' ? (
+        <Field label={translate('auto.components.flows.NodeInspector.5a1f3b7c92', 'Project')}>
+          <AutomationProjectCombobox
+            repos={repos}
+            value={config.projectId ?? ''}
+            triggerClassName={FIELD_CONTROL_CLASS}
+            onValueChange={(projectId) => onConfigChange({ ...config, projectId })}
+          />
+        </Field>
+      ) : null}
       {config.workspaceMode === 'existing' ? (
         <Field
           label={translate('auto.components.flows.NodeInspector.0ba1b86a57', 'Target workspace')}
@@ -211,6 +224,8 @@ function ShellCommandFields({
   config: Extract<FlowNodeConfig, { kind: 'shell-command' }>
   onConfigChange: (config: FlowNodeConfig) => void
 }): React.JSX.Element {
+  const worktreesByRepo = useAppStore((s) => s.worktreesByRepo)
+  const allWorktrees = useMemo(() => Object.values(worktreesByRepo).flat(), [worktreesByRepo])
   return (
     <>
       <Field label={translate('auto.components.flows.NodeInspector.4bc45d9209', 'Command')}>
@@ -237,6 +252,34 @@ function ShellCommandFields({
           className={FIELD_CONTROL_CLASS}
         />
       </Field>
+      <Field
+        label={translate('auto.components.flows.NodeInspector.7d2e9a4b10', 'Workspace (optional)')}
+      >
+        <WorkspaceCombobox
+          worktrees={allWorktrees}
+          value={config.workspaceId ?? ''}
+          triggerClassName={FIELD_CONTROL_CLASS}
+          onValueChange={(workspaceId) => onConfigChange({ ...config, workspaceId })}
+        />
+      </Field>
+      <p className="text-xs text-muted-foreground">
+        {translate(
+          'auto.components.flows.NodeInspector.8e3f0b5c21',
+          'Leave empty to run in the workspace an earlier node created.'
+        )}
+      </p>
+      <label className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Checkbox
+          checked={config.failOnNonZeroExit !== false}
+          onCheckedChange={(checked) =>
+            onConfigChange({ ...config, failOnNonZeroExit: checked === true })
+          }
+        />
+        {translate(
+          'auto.components.flows.NodeInspector.0a9b8c7d6e',
+          'Fail the flow when the command exits non-zero'
+        )}
+      </label>
     </>
   )
 }

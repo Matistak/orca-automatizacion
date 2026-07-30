@@ -34,12 +34,23 @@ export type FlowNodeConfig =
       agentId: TuiAgent
       prompt: string
       workspaceMode: AutomationWorkspaceMode
+      /** Repo the run targets; required when workspaceMode is 'new_per_run'. */
+      projectId?: string | null
       workspaceId?: string | null
       baseBranch?: string | null
       setupDecision?: SetupDecision
       reuseSession?: boolean
     }
-  | { kind: 'shell-command'; command: string; timeoutSeconds: number }
+  | {
+      kind: 'shell-command'
+      command: string
+      timeoutSeconds: number
+      /** Where to run; falls back to the workspace an upstream node produced. */
+      workspaceId?: string | null
+      /** When false the node completes on any exit code so a downstream
+       *  condition can branch on it instead of the flow cutting short. */
+      failOnNonZeroExit?: boolean
+    }
   | { kind: 'condition'; expression: FlowConditionExpression }
 
 export type FlowNode = {
@@ -108,6 +119,10 @@ export type FlowNodeRun = {
   status: AutomationRunStatus
   output: AutomationRunOutputSnapshot | null
   usage: AutomationRunUsage | null
+  workspaceId?: string | null
+  /** Frozen so history stays readable after the workspace is deleted. */
+  workspaceDisplayName?: string | null
+  exitCode?: number | null
   terminalSessionId: string | null
   terminalPaneKey: string | null
   terminalPtyId: string | null
@@ -129,6 +144,45 @@ export type FlowRun = {
   startedAt: number
   completedAt: number | null
   runNumber?: number
+}
+
+// ─── Dispatch bridge (main ⇄ renderer) ──────────────────────────────
+
+/**
+ * Sent to the renderer for node kinds it must execute (agent-prompt), because
+ * launching an agent needs the workspace/terminal machinery that only lives
+ * there. Mirrors AutomationDispatchRequest.
+ */
+export type FlowNodeDispatchRequest = {
+  flowId: string
+  flowName: string
+  flowRunId: string
+  runNumber: number | null
+  nodeId: string
+  /** Config already interpolated with upstream node results. */
+  node: FlowNode
+  trigger: FlowRunTrigger
+  dispatchToken: string
+}
+
+/** Renderer → main progress/result for one dispatched node. */
+export type FlowNodeDispatchResult = {
+  flowRunId: string
+  nodeId: string
+  status: AutomationRunStatus
+  workspaceId?: string | null
+  workspaceDisplayName?: string | null
+  terminalSessionId?: string | null
+  terminalPaneKey?: string | null
+  terminalPtyId?: string | null
+  outputSnapshot?: AutomationRunOutputSnapshot | null
+  usage?: AutomationRunUsage | null
+  error?: string | null
+}
+
+/** Broadcast whenever a run is created or any of its node runs changes. */
+export type FlowRunUpdatedEvent = {
+  run: FlowRun
 }
 
 /** Statuses a run can never leave; only these are safe to evict from history. */

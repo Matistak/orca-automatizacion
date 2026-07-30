@@ -39,6 +39,7 @@ import {
 import { closeAllWatchers } from './ipc/filesystem-watcher'
 import { disposeWorktreeBaseDirectoryWatchers } from './ipc/worktree-base-directory-watcher'
 import { registerCoreHandlers } from './ipc/register-core-handlers'
+import { setFlowRunWebContents } from './ipc/flows'
 import { initObservability, shutdownObservability } from './observability'
 import { registerMobileHandlers } from './ipc/mobile'
 import { initTelemetry, shutdownTelemetry, trackAppOpenedOnce, track } from './telemetry/client'
@@ -1249,6 +1250,7 @@ function openMainWindow(): BrowserWindow {
   )
   automations.setWebContents(window.webContents)
   automations.start()
+  setFlowRunWebContents(window.webContents)
   attachMainWindowServices(
     window,
     store,
@@ -1284,6 +1286,7 @@ function openMainWindow(): BrowserWindow {
     }
     clearExpectedRendererReload(rendererWebContentsId)
     automations?.setWebContents(null)
+    setFlowRunWebContents(null)
     // Why: detach the hook listener on close so the server never fires into destroyed webContents before reopen, and replay runs only on deliberate recreations.
     agentHookServer.setListener(null)
     agentHookServer.setPaneStatusClearListener(null)

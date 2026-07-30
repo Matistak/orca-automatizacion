@@ -229,7 +229,10 @@ import type {
 import type {
   Flow,
   FlowCreateInput,
+  FlowNodeDispatchRequest,
+  FlowNodeDispatchResult,
   FlowRun,
+  FlowRunUpdatedEvent,
   FlowSummary,
   FlowUpdateInput
 } from '../shared/flows-types'
@@ -4543,7 +4546,29 @@ const api = {
       ipcRenderer.invoke('flows:update', args),
     delete: (args: { id: string }): Promise<void> => ipcRenderer.invoke('flows:delete', args),
     listRuns: (args: { flowId: string; limit?: number }): Promise<FlowRun[]> =>
-      ipcRenderer.invoke('flows:listRuns', args)
+      ipcRenderer.invoke('flows:listRuns', args),
+    getRun: (args: { runId: string }): Promise<FlowRun | undefined> =>
+      ipcRenderer.invoke('flows:getRun', args),
+    runNow: (args: { flowId: string }): Promise<FlowRun> =>
+      ipcRenderer.invoke('flows:runNow', args),
+    markNodeDispatchResult: (result: FlowNodeDispatchResult): Promise<void> =>
+      ipcRenderer.invoke('flows:markNodeDispatchResult', result),
+    onNodeDispatchRequested: (
+      callback: (request: FlowNodeDispatchRequest) => void
+    ): (() => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        request: FlowNodeDispatchRequest
+      ): void => callback(request)
+      ipcRenderer.on('flows:nodeDispatchRequested', listener)
+      return () => ipcRenderer.removeListener('flows:nodeDispatchRequested', listener)
+    },
+    onRunUpdated: (callback: (event: FlowRunUpdatedEvent) => void): (() => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, payload: FlowRunUpdatedEvent): void =>
+        callback(payload)
+      ipcRenderer.on('flows:runUpdated', listener)
+      return () => ipcRenderer.removeListener('flows:runUpdated', listener)
+    }
   },
 
   e2e: {

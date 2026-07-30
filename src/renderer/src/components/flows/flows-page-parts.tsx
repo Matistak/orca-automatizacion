@@ -1,5 +1,5 @@
 import React from 'react'
-import { AlertTriangle, Check, Loader2, Plus, Trash2, X } from 'lucide-react'
+import { AlertTriangle, Check, Loader2, Play, Plus, Trash2, X } from 'lucide-react'
 import type { Flow } from '../../../../shared/flows-types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,6 +11,9 @@ export type SaveState = 'saved' | 'dirty' | 'saving'
 export function FlowsHeader({
   flow,
   saveState,
+  isRunning,
+  canRun,
+  onRun,
   onRename,
   onToggleEnabled,
   onCreate,
@@ -19,6 +22,10 @@ export function FlowsHeader({
 }: {
   flow: Flow | null
   saveState: SaveState
+  isRunning: boolean
+  /** False while the graph has validation errors — running it would throw. */
+  canRun: boolean
+  onRun: () => void
   onRename: (name: string) => void
   onToggleEnabled: (enabled: boolean) => void
   onCreate: () => void
@@ -48,6 +55,26 @@ export function FlowsHeader({
         </>
       ) : null}
       <div className="ml-auto flex items-center gap-2">
+        {flow ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={onRun}
+            disabled={isRunning || !canRun}
+            title={
+              canRun
+                ? undefined
+                : translate(
+                    'auto.components.flows.flows.page.parts.9c0b1a2d3e',
+                    'Fix the problems listed above before running this flow.'
+                  )
+            }
+          >
+            {isRunning ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
+            {translate('auto.components.flows.flows.page.parts.4f5a6b7c8d', 'Run now')}
+          </Button>
+        ) : null}
         <Button type="button" size="sm" variant="secondary" onClick={onCreate}>
           <Plus className="size-4" />
           {translate('auto.components.flows.flows.page.parts.5e7f6d1c63', 'New flow')}

@@ -18,7 +18,7 @@
 | 2 — Puente IPC/RPC y store del renderer | ✅ Hecho | IPC `flows:*`, RPC `flow.*` (zod), `window.api.flows.*`, slice `flowSlice`. typecheck 0 · lint OK · tests verdes. |
 | 3 — Motor de ejecución del DAG (MVP) | ✅ Hecho | `FlowExecutionEngine` + validación/topo/condición/interpolación, dispatcher abstracto. 29 tests · typecheck 0 · lint OK. |
 | 4 — Editor visual de nodos (UI) | ✅ Hecho | `@xyflow/react` instalado. Vista `flows` cableada, canvas + paleta + inspector + autosave + validación en vivo. `flow-graph` movido a `shared/`. typecheck (node/cli/web) 0 · lint OK. |
-| 5 — Ejecución desde UI + observabilidad | ⬜ Pendiente | |
+| 5 — Ejecución desde UI + observabilidad | ✅ Hecho | `flows:runNow` + `FlowRunService`, dispatcher shell (main) y agent (renderer, reusando el coordinador de automatizaciones), overlay de estado en vivo, historial y detalle de run. 45 tests flows · typecheck 0 · lint OK. |
 | 6 — Integración con el scheduler | ⬜ Pendiente | |
 | 7 — Preparación SQLite + pulido | ⬜ Pendiente | |
 
@@ -332,18 +332,61 @@ coordenadas → el motor es testeable sin UI.
 
 **Objetivo:** correr flujos desde la UI y ver qué pasó.
 
-- [ ] Botón **"Run now"** en un flujo → `flows:runNow`.
-- [ ] **Overlay de estado en vivo** sobre el canvas: cada nodo pinta su estado
-      (idle / running / done / failed / skipped) mientras corre.
-- [ ] Historial de runs (`FlowRunHistory.tsx`, patrón `AutomationRunHistory.tsx`).
-- [ ] Detalle de run: recorrer nodos, ver output snapshot, tokens/coste (reusar
-      `run-usage-collection`), abrir el terminal del nodo (reusar punteros pane/pty).
-- [ ] Estados de error claros: SSH no disponible, workspace borrado, precheck fallido
-      (reusar `skipped_needs_interactive_auth`, `skipped_unavailable`, etc.).
+- [x] Botón **"Run now"** en el header → `flows:runNow` → `FlowRunService.runNow` (guard de
+      concurrencia por flujo, patrón del flag `evaluating`). Deshabilitado si la validación
+      del grafo tiene errores.
+- [x] **Ejecución real por tipo de nodo** (el wiring que la Etapa 3 dejó tras el dispatcher
+      abstracto):
+  - `shell-command` → `dispatchShellFlowNode` reusa `runAutomationPrecheck` (local/SSH).
+    El workspace sale del config o **se hereda** del nodo anterior (`flow-shell-target.ts`).
+    `failOnNonZeroExit` (default `true`) permite que un exit≠0 siga vivo para que una
+    `condition` pueda ramificar sobre él.
+  - `agent-prompt` → `RendererFlowNodeDispatcher` envía `flows:nodeDispatchRequested` y
+    espera un estado final; los estados intermedios se persisten como progreso en vivo.
+    El renderer (`useFlowDispatchEvents`) sintetiza un `Automation`/`AutomationRun`
+    (`flow-agent-node-automation.ts`) y reusa el coordinador de dispatch de automatizaciones.
+- [x] **Overlay de estado en vivo** sobre el canvas: cada nodo pinta idle/running/done/
+      failed/skipped (`flow-run-presentation.ts`, `FlowNodeCard`), alimentado por el evento
+      `flows:runUpdated` que emite `BroadcastingFlowRepository`.
+- [x] Historial de runs (`FlowRunHistory.tsx`) colapsable + detalle por nodo: output snapshot,
+      error, exit code, tokens/coste y botón para abrir el workspace del nodo.
+- [x] Estados de error claros: se reusan `skipped_unavailable` /
+      `skipped_needs_interactive_auth` / `dispatch_failed` del camino de automatizaciones.
+- [x] Validación de config de nodo en `validateFlowGraph` (prompt/proyecto/workspace/comando
+      faltantes) para que un run inválido no falle recién en ejecución.
+- [x] **Tests**: `flow-shell-target`, `shell-flow-node-dispatcher` (exit codes, timeout,
+      opt-out), `renderer-flow-node-dispatcher` (progreso vs. estado final, sin ventana,
+      abandono) y validación de config. 45 tests de flows verdes.
 
-**Entregable:** ejecución manual completa observable desde la UI.
+**Entregable:** ejecución manual completa observable desde la UI. ✅ **HECHO**
+(typecheck node/cli/web 0 · lint + gates OK · 45 tests flows · suites de automatizaciones verdes)
 
----
+**Archivos tocados:**
+- Main: `src/main/flows/{flow-run-service,renderer-flow-node-dispatcher,shell-flow-node-dispatcher,
+  flow-shell-target}.ts` (+ tests), `flow-execution-engine.ts`, `flow-node-dispatcher.ts`,
+  `src/main/ipc/flows.ts`, `src/main/index.ts`, `src/main/runtime/rpc/methods/flows.ts`
+- Shared: `src/shared/flows-types.ts` (config `projectId`/`workspaceId`/`failOnNonZeroExit`,
+  `FlowNodeDispatchRequest/Result`, `FlowRunUpdatedEvent`, node-run `workspaceId`/`exitCode`),
+  `src/shared/flow-graph.ts` (validación de config)
+- Preload: `src/preload/{index,api-types}.ts` (`runNow`, `getRun`, `markNodeDispatchResult`,
+  `onNodeDispatchRequested`, `onRunUpdated`)
+- Renderer: `hooks/useFlowDispatchEvents.ts`, `lib/flow-agent-node-automation.ts`,
+  `components/flows/{FlowRunHistory.tsx,flow-run-presentation.ts,use-flow-runs.ts}`,
+  `FlowsPage.tsx`, `flows-page-parts.tsx`, `FlowCanvas.tsx`, `FlowNodeCard.tsx`,
+  `NodeInspector.tsx`, `store/slices/flows.ts`, `App.tsx`
+- Refactor (sin duplicar 600 líneas de dispatch): `useAutomationDispatchEvents.ts` se divide en
+  `lib/dispatch-automation-run.ts` (orquestador) + `lib/automation-run-workspace-preparation.ts`
+  + `lib/automation-run-agent-session.ts` + `lib/automation-run-completion-tracker.ts`.
+  Esto además **elimina** el `eslint-disable max-lines` que arrastraba el hook.
+
+**Limitaciones conocidas (deuda explícita):**
+- Los workspaces creados por un nodo de agente **no llevan provenance** de automatización:
+  `resolveAutomationWorkspaceProvenance` exige una `Automation` persistida y un nodo de flujo
+  no lo es. Habría que extender el token/provenance a flujos (candidato para Etapa 6/7).
+- "Open" en el detalle de run navega al workspace del nodo; **no** restaura el panel/PTY exacto
+  (`resolveAutomationRunOpenTarget`), que sigue siendo específico de automatizaciones.
+- La recolección de tokens/coste (`run-usage-collection`) aún no se ejecuta para nodos de flujo:
+  el `usage` se muestra si el dispatch lo reporta, pero no hay atribución por ventana de sesión.
 
 ### Etapa 6 — Integración con el scheduler
 

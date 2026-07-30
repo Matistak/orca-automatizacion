@@ -38,6 +38,8 @@ function completedResult(): FlowNodeResult {
     output: null,
     usage: null,
     exitCode: null,
+    workspaceId: null,
+    workspaceDisplayName: null,
     terminalSessionId: null,
     terminalPaneKey: null,
     terminalPtyId: null,
@@ -51,6 +53,9 @@ function nodeRunFrom(nodeId: string, result: FlowNodeResult, startedAt: number):
     status: result.status,
     output: result.output,
     usage: result.usage,
+    workspaceId: result.workspaceId,
+    workspaceDisplayName: result.workspaceDisplayName,
+    exitCode: result.exitCode,
     terminalSessionId: result.terminalSessionId,
     terminalPaneKey: result.terminalPaneKey,
     terminalPtyId: result.terminalPtyId,
@@ -109,12 +114,13 @@ export class FlowExecutionEngine {
       completedAt: null
     })
 
-    const finalStatus = await this.walk(snapshot, run.id)
+    const finalStatus = await this.walk(snapshot, run)
     const persisted = this.repository.updateRunStatus(run.id, finalStatus, Date.now())
     return { run: persisted, status: finalStatus }
   }
 
-  private async walk(flow: Flow, runId: string): Promise<FlowRunStatus> {
+  private async walk(flow: Flow, run: FlowRun): Promise<FlowRunStatus> {
+    const runId = run.id
     const order = topologicalOrder(flow)
     const trigger = findTriggerNode(flow)
     const results = new Map<string, FlowNodeResult>()
@@ -129,7 +135,15 @@ export class FlowExecutionEngine {
         continue
       }
 
-      const context: FlowExecutionContext = { flowRunId: runId, results, previousNodeId }
+      const context: FlowExecutionContext = {
+        flowId: flow.id,
+        flowName: flow.name,
+        flowRunId: runId,
+        runNumber: run.runNumber ?? null,
+        trigger: run.trigger,
+        results,
+        previousNodeId
+      }
       const startedAt = Date.now()
       const result = await this.executeNode(flow, node, context, results)
       results.set(node.id, result)

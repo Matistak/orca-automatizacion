@@ -37,6 +37,8 @@ function result(overrides: Partial<FlowNodeResult> = {}): FlowNodeResult {
     output: null,
     usage: null,
     exitCode: null,
+    workspaceId: null,
+    workspaceDisplayName: null,
     terminalSessionId: null,
     terminalPaneKey: null,
     terminalPtyId: null,
@@ -84,7 +86,13 @@ const trigger: FlowNode = {
 function agentNode(id: string, prompt = 'do work'): FlowNode {
   return {
     id,
-    config: { kind: 'agent-prompt', agentId: 'claude', prompt, workspaceMode: 'new_per_run' },
+    config: {
+      kind: 'agent-prompt',
+      agentId: 'claude',
+      prompt,
+      workspaceMode: 'new_per_run',
+      projectId: 'repo-1'
+    },
     position: { x: 0, y: 0 }
   }
 }

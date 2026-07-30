@@ -16,7 +16,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import './flow-canvas-theme.css'
-import type { Flow, FlowEdge, FlowNodeKind } from '../../../../shared/flows-types'
+import type { Flow, FlowEdge, FlowNodeKind, FlowNodeRun } from '../../../../shared/flows-types'
 import { FlowNodeCard, type FlowNodeCardData } from './FlowNodeCard'
 import { FLOW_NODE_DRAG_MIME } from './NodePalette'
 
@@ -27,6 +27,8 @@ export type FlowCanvasProps = {
   flow: Flow
   selectedNodeId: string | null
   invalidNodeIds: ReadonlySet<string>
+  /** Live node results of the run being observed, if any. */
+  nodeRunsByNodeId: ReadonlyMap<string, FlowNodeRun>
   onSelectNode: (nodeId: string | null) => void
   onNodePositionChange: (nodeId: string, position: { x: number; y: number }) => void
   onDeleteNode: (nodeId: string) => void
@@ -47,6 +49,7 @@ function FlowCanvasInner({
   flow,
   selectedNodeId,
   invalidNodeIds,
+  nodeRunsByNodeId,
   onSelectNode,
   onNodePositionChange,
   onDeleteNode,
@@ -64,9 +67,13 @@ function FlowCanvasInner({
         type: 'flowNode',
         position: node.position,
         selected: node.id === selectedNodeId,
-        data: { node, invalid: invalidNodeIds.has(node.id) }
+        data: {
+          node,
+          invalid: invalidNodeIds.has(node.id),
+          nodeRun: nodeRunsByNodeId.get(node.id)
+        }
       })),
-    [flow.nodes, invalidNodeIds, selectedNodeId]
+    [flow.nodes, invalidNodeIds, nodeRunsByNodeId, selectedNodeId]
   )
 
   // React Flow owns node state so drags stay smooth; positions persist on drag stop.

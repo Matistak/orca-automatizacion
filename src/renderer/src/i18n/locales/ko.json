@@ -784,6 +784,9 @@
         "description": "에이전트와 터미널 도구의 파일 접근은 macOS에서 Orca의 접근으로 표시됩니다. 전체 디스크 접근 권한을 허용하면 이러한 요청을 줄일 수 있습니다.",
         "openSettings": "설정 열기",
         "dismiss": "다시 표시하지 않기"
+      },
+      "useFlowDispatchEvents": {
+        "6f2a1d0c11": "This agent node has no project selected."
       }
     },
     "components": {
@@ -14125,7 +14128,11 @@
           "db52cbdc6a": "Agent",
           "363268c9ca": "This flow runs when you click “Run now”. No configuration needed.",
           "af4b6c472c": "Label",
-          "dea86daf79": "Delete node"
+          "dea86daf79": "Delete node",
+          "5a1f3b7c92": "Project",
+          "7d2e9a4b10": "Workspace (optional)",
+          "8e3f0b5c21": "Leave empty to run in the workspace an earlier node created.",
+          "0a9b8c7d6e": "Fail the flow when the command exits non-zero"
         },
         "NodePalette": {
           "5204a981d9": "Nodes"
@@ -14144,6 +14151,16 @@
               "8926d60e5c": "Entry point for a flow you run on demand.",
               "7f72256204": "Manual trigger"
             }
+          },
+          "run": {
+            "presentation": {
+              "6b91a1d0f2": "Pending",
+              "2a7f0c5b19": "Starting",
+              "b2c4d6e8a0": "Running",
+              "3f8a6c2d41": "Completed",
+              "9d1e7b5c30": "Failed",
+              "71c3f9a284": "Skipped"
+            }
           }
         },
         "flows": {
@@ -14157,7 +14174,26 @@
               "d01e1244c3": "Saving…",
               "1dfd976b28": "Close",
               "2b932e6556": "Enabled",
-              "da54929a93": "Flows"
+              "da54929a93": "Flows",
+              "9c0b1a2d3e": "Fix the problems listed above before running this flow.",
+              "4f5a6b7c8d": "Run now"
+            }
+          }
+        },
+        "FlowRunHistory": {
+          "5c3b0a91f7": "Run history",
+          "a1d2e3f405": "run",
+          "b6c7d8e9f0": "runs",
+          "0f1e2d3c4b": "No runs yet.",
+          "7a8b9c0d1e": "Select a run to see what each node did.",
+          "5e6f7a8b90": "exit",
+          "2c3d4e5f60": "Open",
+          "3d4e5f6071": "tokens"
+        },
+        "use": {
+          "flow": {
+            "runs": {
+              "4b8e1c0a72": "Failed to run flow"
             }
           }
         }

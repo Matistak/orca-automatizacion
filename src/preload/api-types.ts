@@ -517,7 +517,10 @@ import type {
 import type {
   Flow,
   FlowCreateInput,
+  FlowNodeDispatchRequest,
+  FlowNodeDispatchResult,
   FlowRun,
+  FlowRunUpdatedEvent,
   FlowSummary,
   FlowUpdateInput
 } from '../shared/flows-types'
@@ -3451,6 +3454,11 @@ export type PreloadApi = {
     update: (args: { id: string; updates: FlowUpdateInput }) => Promise<Flow>
     delete: (args: { id: string }) => Promise<void>
     listRuns: (args: { flowId: string; limit?: number }) => Promise<FlowRun[]>
+    getRun: (args: { runId: string }) => Promise<FlowRun | undefined>
+    runNow: (args: { flowId: string }) => Promise<FlowRun>
+    markNodeDispatchResult: (result: FlowNodeDispatchResult) => Promise<void>
+    onNodeDispatchRequested: (callback: (request: FlowNodeDispatchRequest) => void) => () => void
+    onRunUpdated: (callback: (event: FlowRunUpdatedEvent) => void) => () => void
   }
   wsl: {
     isAvailable: () => Promise<boolean>

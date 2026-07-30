@@ -10,6 +10,8 @@ import { NodePalette } from './NodePalette'
 import { NodeInspector } from './NodeInspector'
 import { createDefaultNodeConfig } from './flow-node-presentation'
 import { FlowsEmptyState, FlowsHeader, ValidationBanner, type SaveState } from './flows-page-parts'
+import { FlowRunHistory } from './FlowRunHistory'
+import { useFlowRuns } from './use-flow-runs'
 import { translate } from '@/i18n/i18n'
 
 const AUTOSAVE_DELAY_MS = 700
@@ -22,11 +24,14 @@ export default function FlowsPage(): React.JSX.Element {
   const updateFlow = useAppStore((s) => s.updateFlow)
   const deleteFlow = useAppStore((s) => s.deleteFlow)
   const closeFlowsPage = useAppStore((s) => s.closeFlowsPage)
+  const setActiveWorktree = useAppStore((s) => s.setActiveWorktree)
 
   const [selectedFlowId, setSelectedFlowId] = useState<string | null>(null)
   const [editingFlow, setEditingFlow] = useState<Flow | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [saveState, setSaveState] = useState<SaveState>('saved')
+  const [historyCollapsed, setHistoryCollapsed] = useState(true)
+  const flowRuns = useFlowRuns(selectedFlowId)
 
   const editingFlowRef = useRef<Flow | null>(null)
   const saveTimerRef = useRef<number | null>(null)
@@ -264,12 +269,19 @@ export default function FlowsPage(): React.JSX.Element {
   }, [validation])
 
   const selectedNode = editingFlow?.nodes.find((node) => node.id === selectedNodeId) ?? null
+  const canRun = (validation?.errors.length ?? 0) === 0
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
       <FlowsHeader
         flow={editingFlow}
         saveState={saveState}
+        isRunning={flowRuns.isRunning}
+        canRun={canRun}
+        onRun={() => {
+          void flowRuns.runNow()
+          setHistoryCollapsed(false)
+        }}
         onRename={(name) => mutateFlow((flow) => ({ ...flow, name }))}
         onToggleEnabled={(enabled) => mutateFlow((flow) => ({ ...flow, enabled }))}
         onCreate={handleCreateFlow}
@@ -299,6 +311,7 @@ export default function FlowsPage(): React.JSX.Element {
                   flow={editingFlow}
                   selectedNodeId={selectedNodeId}
                   invalidNodeIds={invalidNodeIds}
+                  nodeRunsByNodeId={flowRuns.nodeRunsByNodeId}
                   onSelectNode={setSelectedNodeId}
                   onNodePositionChange={handleNodePositionChange}
                   onDeleteNode={handleDeleteNode}
@@ -326,6 +339,19 @@ export default function FlowsPage(): React.JSX.Element {
                 )}
               </aside>
             </div>
+            <FlowRunHistory
+              runs={flowRuns.runs}
+              selectedRunId={flowRuns.selectedRunId}
+              collapsed={historyCollapsed}
+              onToggleCollapsed={() => setHistoryCollapsed((current) => !current)}
+              onSelectRun={flowRuns.selectRun}
+              onOpenNodeWorkspace={(nodeRun) => {
+                if (nodeRun.workspaceId) {
+                  setActiveWorktree(nodeRun.workspaceId)
+                  closeFlowsPage()
+                }
+              }}
+            />
           </div>
         ) : (
           <FlowsEmptyState onCreate={handleCreateFlow} hasFlows={flowSummaries.length > 0} />

@@ -148,6 +148,9 @@ import {
   nextAutomationRunNumber,
   pruneAutomationRuns
 } from '../shared/automation-run-retention'
+import { pruneFlowRuns } from '../shared/flow-run-retention'
+import { migrateFlow } from './flows/flow-schema-migrations'
+import type { Flow, FlowRun } from '../shared/flows-types'
 import { pruneWorkspaceSessionBrowserHistory } from '../shared/workspace-session-browser-history'
 import {
   FOLDER_WORKSPACE_INSTANCE_SEPARATOR,
@@ -3418,6 +3421,18 @@ export class Store {
             }
             return runs
           })(),
+          flows: Array.isArray(parsed.flows) ? parsed.flows.map(migrateFlow) : [],
+          flowRuns: (() => {
+            if (!Array.isArray(parsed.flowRuns)) {
+              return []
+            }
+            const runs = pruneFlowRuns(parsed.flowRuns)
+            // Why: nothing else marks dirty, so an oversized legacy file would otherwise only shrink at the next unrelated save.
+            if (runs.length !== parsed.flowRuns.length) {
+              this.loadNeedsSave = true
+            }
+            return runs
+          })(),
           onboarding: normalizedOnboarding
         }
       }
@@ -4999,6 +5014,29 @@ export class Store {
 
   getLatestAutomationOccurrence(automation: Automation, now = Date.now()): number | null {
     return latestAutomationOccurrenceAtOrBefore(automation.rrule, automation.dtstart, now)
+  }
+
+  // ── Flows (node-flow editor) ──────────────────────────────────────
+  // Why: raw slot accessors so JsonFlowRepository owns the flow CRUD logic
+  // while reusing this store's JSON persistence. A future SqliteFlowRepository
+  // bypasses these entirely.
+
+  readFlows(): Flow[] {
+    return this.state.flows ?? []
+  }
+
+  writeFlows(flows: Flow[]): void {
+    this.state.flows = flows
+    this.flush()
+  }
+
+  readFlowRuns(): FlowRun[] {
+    return this.state.flowRuns ?? []
+  }
+
+  writeFlowRuns(runs: FlowRun[]): void {
+    this.state.flowRuns = runs
+    this.flush()
   }
 
   // ── Worktree Meta ──────────────────────────────────────────────────

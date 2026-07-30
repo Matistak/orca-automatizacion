@@ -23,11 +23,28 @@ const OptionalTuiAgent = z
   .optional()
 
 const AutomationWorkspaceProvenanceRequest = z.object({
+  kind: z.literal('automation'),
   automationId: z.string(),
   automationRunId: z.string(),
   dispatchToken: z.string(),
   createRequestId: z.string()
 })
+
+// Why a separate variant: a flow node is authorized against its live flow run,
+// not against a persisted Automation, so the ids it proves are different.
+const FlowWorkspaceProvenanceRequest = z.object({
+  kind: z.literal('flow'),
+  flowId: z.string(),
+  flowRunId: z.string(),
+  nodeId: z.string(),
+  dispatchToken: z.string(),
+  createRequestId: z.string()
+})
+
+const SystemRunWorkspaceProvenanceRequest = z.discriminatedUnion('kind', [
+  AutomationWorkspaceProvenanceRequest,
+  FlowWorkspaceProvenanceRequest
+])
 
 // Why no dispatch token (unlike automation provenance): this is a descriptive
 // origin marker for sidebar filtering, not an authority grant. The host stamps
@@ -156,7 +173,7 @@ export const WorktreeCreate = z
     // Why: mobile retries a create interrupted by a connection migration with the
     // same key so the host dedupes instead of spawning a duplicate worktree.
     clientMutationId: z.string().min(1).max(128).optional(),
-    automationProvenanceRequest: AutomationWorkspaceProvenanceRequest.optional(),
+    automationProvenanceRequest: SystemRunWorkspaceProvenanceRequest.optional(),
     cliProvenanceRequest: CliWorkspaceProvenanceRequest.optional()
   })
   .superRefine((params, ctx) => {

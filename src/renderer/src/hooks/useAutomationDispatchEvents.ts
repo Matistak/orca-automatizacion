@@ -18,6 +18,7 @@ export function useAutomationDispatchEvents(): void {
             window.api.automations.runPrecheck({ automationId: automation.id, runId: run.id }),
           listRuns: () => window.api.automations.listRuns({ automationId: automation.id }),
           buildProvenanceRequest: (createRequestId) => ({
+            kind: 'automation',
             automationId: automation.id,
             automationRunId: run.id,
             dispatchToken,

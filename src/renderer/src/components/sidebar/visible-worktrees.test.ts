@@ -147,6 +147,34 @@ describe('computeVisibleWorktreeIds', () => {
     expect(result).toEqual([manual.id])
   })
 
+  it('hides flow-created workspaces under the same automation filter', () => {
+    const manual = makeWorktree('manual')
+    const flowCreated = {
+      ...makeWorktree('flow-created'),
+      automationProvenance: {
+        kind: 'created-by-flow' as const,
+        flowId: 'flow-1',
+        flowNameSnapshot: 'Nightly audit',
+        flowRunId: 'run-1',
+        flowRunNumber: 3,
+        nodeId: 'node-1',
+        nodeLabelSnapshot: 'claude',
+        createdAt: 123,
+        projectId: 'repo1',
+        repoId: 'repo1',
+        hostId: 'local' as const
+      }
+    }
+
+    const result = computeVisibleWorktreeIds(
+      { repo1: [manual, flowCreated] },
+      [manual.id, flowCreated.id],
+      visibleOptions({ hideAutomationGeneratedWorkspaces: true })
+    )
+
+    expect(result).toEqual([manual.id])
+  })
+
   it('hides CLI-created workspaces when the CLI filter is enabled', () => {
     const manual = makeWorktree('manual')
     const cliCreated = {

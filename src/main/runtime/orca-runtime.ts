@@ -133,7 +133,7 @@ import type {
   AutomationWorkspaceMode
 } from '../../shared/automations-types'
 import type {
-  AutomationWorkspaceProvenance,
+  SystemRunWorkspaceProvenance,
   CliWorkspaceProvenance,
   BaseRefSearchResult,
   CreateWorktreeResult,
@@ -3588,6 +3588,11 @@ export class OrcaRuntimeService {
 
   listFlowRuns(flowId: string, limit?: number): FlowRun[] {
     return this.getFlowRepository().listRunsByFlow(flowId, limit)
+  }
+
+  /** Authority for flow workspace provenance: the run is what authorizes it. */
+  getFlowRun(runId: string): FlowRun | undefined {
+    return this.getFlowRepository().getRun(runId)
   }
 
   private async resolveAutomationTarget(
@@ -19983,7 +19988,7 @@ export class OrcaRuntimeService {
     startupAgent?: TuiAgent
     startupPrompt?: string
     pendingFirstAgentMessageRename?: boolean
-    automationProvenance?: AutomationWorkspaceProvenance
+    automationProvenance?: SystemRunWorkspaceProvenance
     cliProvenance?: CliWorkspaceProvenance
     startup?: WorktreeStartupLaunch
     startupDraft?: string
@@ -21060,7 +21065,7 @@ export class OrcaRuntimeService {
       observeSetupCompletion?: boolean
       createdWithAgent?: TuiAgent
       pendingFirstAgentMessageRename?: boolean
-      automationProvenance?: AutomationWorkspaceProvenance
+      automationProvenance?: SystemRunWorkspaceProvenance
       cliProvenance?: CliWorkspaceProvenance
       startup?: WorktreeStartupLaunch
       startupFollowup?: WorktreeStartupFollowup

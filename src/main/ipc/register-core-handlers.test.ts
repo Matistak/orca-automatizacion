@@ -135,6 +135,13 @@ const {
 vi.mock('electron', () => ({
   app: {
     getPath: getPathMock
+  },
+  // Why: registrars that own their own channels (e.g. flows) call ipcMain.handle
+  // directly during registerCoreHandlers.
+  ipcMain: {
+    handle: vi.fn(),
+    on: vi.fn(),
+    removeHandler: vi.fn()
   }
 }))
 

@@ -83,6 +83,59 @@ describe('RendererFlowNodeDispatcher', () => {
     expect(result.status).toBe('skipped_unavailable')
   })
 
+  it('attaches collected usage to the final result', async () => {
+    const collected = { status: 'known', provider: 'claude' } as never
+    const collect = vi.fn(async () => collected)
+    const webContents = {
+      isDestroyed: () => false,
+      send: () => {}
+    } as unknown as WebContents
+    const dispatcher = new RendererFlowNodeDispatcher(
+      {} as FlowRepository,
+      () => webContents,
+      collect
+    )
+
+    const pending = dispatcher.dispatchAgentNode({ node, context })
+    await Promise.resolve()
+    dispatcher.reportNodeResult({
+      flowRunId: 'run-1',
+      nodeId: 'node-1',
+      status: 'completed',
+      workspaceId: 'repo-1::/wt'
+    })
+
+    await expect(pending).resolves.toMatchObject({ usage: collected })
+    expect(collect).toHaveBeenCalledWith(
+      expect.objectContaining({ node, startedAt: expect.any(Number) })
+    )
+  })
+
+  it('keeps the node result when usage collection throws', async () => {
+    const webContents = {
+      isDestroyed: () => false,
+      send: () => {}
+    } as unknown as WebContents
+    const dispatcher = new RendererFlowNodeDispatcher(
+      {} as FlowRepository,
+      () => webContents,
+      async () => {
+        throw new Error('usage scan failed')
+      }
+    )
+
+    const pending = dispatcher.dispatchAgentNode({ node, context })
+    await Promise.resolve()
+    dispatcher.reportNodeResult({
+      flowRunId: 'run-1',
+      nodeId: 'node-1',
+      status: 'completed',
+      workspaceId: 'repo-1::/wt'
+    })
+
+    await expect(pending).resolves.toMatchObject({ status: 'completed', usage: null })
+  })
+
   it('fails pending nodes when the window goes away', async () => {
     const { dispatcher } = setup()
     const pending = dispatcher.dispatchAgentNode({ node, context })

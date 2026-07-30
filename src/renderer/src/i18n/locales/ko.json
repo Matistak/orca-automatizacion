@@ -4440,7 +4440,11 @@
           "cliCreatedFromAgent": "Created by an agent via `orca worktree create`",
           "cliCreatedFromShell": "Created via `orca worktree create`",
           "cliStartupAgent": "Started with {{value0}}",
-          "cliCreated": "Created by Orca CLI"
+          "cliCreated": "Created by Orca CLI",
+          "flowHeader": "Flow",
+          "openFlow": "Open flow",
+          "flowMissing": "Flow no longer available.",
+          "flowCreated": "Created by flow"
         },
         "WorktreeCardMetadataStatusBadges": {
           "fe188062a1": "상태: 열림",
@@ -14100,7 +14104,9 @@
           "59f683f974": "Select a node to edit it, or drag one from the palette.",
           "e2215cec19": "Failed to delete flow",
           "7838f45ff5": "Failed to create flow",
-          "3e20835f66": "Failed to save flow"
+          "3e20835f66": "Failed to save flow",
+          "9a4c17be23": "Workspace is not available.",
+          "4d81f0aa72": "Run terminal is no longer available — opened the workspace instead."
         },
         "NodeInspector": {
           "815ee41877": "handles to the nodes that should run for each outcome.",

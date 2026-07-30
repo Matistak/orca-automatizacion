@@ -5,7 +5,8 @@ import { buildAutomationWorkspaceProvenance } from '../../shared/automation-work
 import type {
   AutomationWorkspaceProvenance,
   AutomationWorkspaceProvenanceRequest,
-  Repo
+  Repo,
+  SystemRunWorkspaceProvenanceRequest
 } from '../../shared/types'
 import {
   beginAutomationDispatchTokenUse,
@@ -79,7 +80,7 @@ export function resolveAutomationWorkspaceProvenance(args: {
 }
 
 export function releaseAutomationWorkspaceProvenanceRequest(
-  request: AutomationWorkspaceProvenanceRequest | undefined
+  request: SystemRunWorkspaceProvenanceRequest | undefined
 ): void {
   if (!request) {
     return
@@ -91,7 +92,7 @@ export function releaseAutomationWorkspaceProvenanceRequest(
 }
 
 export function finishAutomationWorkspaceProvenanceRequest(
-  request: AutomationWorkspaceProvenanceRequest | undefined
+  request: SystemRunWorkspaceProvenanceRequest | undefined
 ): void {
   if (!request) {
     return

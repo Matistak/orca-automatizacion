@@ -21,7 +21,7 @@ import {
 } from '../../../shared/execution-host'
 import { parseWorkspaceKey } from '../../../shared/workspace-scope'
 import { getFolderWorkspaceConnectionId } from '@/lib/folder-workspace-connection'
-import type { AutomationWorkspaceProvenanceRequest, Worktree } from '../../../shared/types'
+import type { SystemRunWorkspaceProvenanceRequest, Worktree } from '../../../shared/types'
 
 export type AutomationRunWorkspacePreparation =
   /** A terminal outcome was already reported; the caller must stop. */
@@ -35,7 +35,7 @@ export type AutomationRunWorkspaceArgs = {
   runPrecheck?: () => Promise<AutomationPrecheckResult | null>
   buildProvenanceRequest?: (
     createRequestId: string
-  ) => AutomationWorkspaceProvenanceRequest | undefined
+  ) => SystemRunWorkspaceProvenanceRequest | undefined
 }
 
 function buildAutomationWorkspaceName(runTitle: string, scheduledFor: number): string {

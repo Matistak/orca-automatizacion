@@ -35,8 +35,11 @@ export function isDefaultBranchWorkspace(worktree: Worktree): boolean {
   return worktree.isMainWorktree && worktree.branch.trim() !== ''
 }
 
+/** Covers both unattended creators — automation runs and flow agent nodes — so
+ *  the "hide automation-generated" filter catches flow-created workspaces too. */
 export function isAutomationGeneratedWorkspace(worktree: Worktree): boolean {
-  return worktree.automationProvenance?.kind === 'created-by-automation'
+  const kind = worktree.automationProvenance?.kind
+  return kind === 'created-by-automation' || kind === 'created-by-flow'
 }
 
 export function isCliCreatedWorkspace(worktree: Worktree): boolean {

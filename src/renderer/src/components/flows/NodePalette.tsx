@@ -1,7 +1,7 @@
 import React from 'react'
 import type { FlowNodeKind } from '../../../../shared/flows-types'
 import { cn } from '@/lib/utils'
-import { FLOW_NODE_KIND_META } from './flow-node-presentation'
+import { listFlowNodeKindMeta } from './flow-node-presentation'
 import { translate } from '@/i18n/i18n'
 
 export const FLOW_NODE_DRAG_MIME = 'application/orca-flow-node-kind'
@@ -17,7 +17,7 @@ export function NodePalette({ onAddNode }: NodePaletteProps): React.JSX.Element 
       <div className="px-1 pb-1 text-xs font-medium text-muted-foreground">
         {translate('auto.components.flows.NodePalette.5204a981d9', 'Nodes')}
       </div>
-      {FLOW_NODE_KIND_META.map((meta) => {
+      {listFlowNodeKindMeta().map((meta) => {
         const Icon = meta.icon
         return (
           <button

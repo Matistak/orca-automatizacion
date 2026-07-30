@@ -1,9 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import type { Flow, FlowEdge, FlowNode, FlowNodeKind } from '../../../../shared/flows-types'
+import type {
+  Flow,
+  FlowEdge,
+  FlowNode,
+  FlowNodeKind,
+  FlowNodeRun
+} from '../../../../shared/flows-types'
 import { validateFlowGraph } from '../../../../shared/flow-graph'
 import { useAppStore } from '@/store'
 import { createBrowserUuid } from '@/lib/browser-uuid'
+import { activateAndRevealWorktree } from '@/lib/worktree-activation'
+import { openFlowNodeRun } from './open-flow-node-run'
 import { FlowList } from './FlowList'
 import { FlowCanvas } from './FlowCanvas'
 import { NodePalette } from './NodePalette'
@@ -24,7 +32,8 @@ export default function FlowsPage(): React.JSX.Element {
   const updateFlow = useAppStore((s) => s.updateFlow)
   const deleteFlow = useAppStore((s) => s.deleteFlow)
   const closeFlowsPage = useAppStore((s) => s.closeFlowsPage)
-  const setActiveWorktree = useAppStore((s) => s.setActiveWorktree)
+  const pendingFlowSelectionId = useAppStore((s) => s.pendingFlowSelectionId)
+  const setPendingFlowSelection = useAppStore((s) => s.setPendingFlowSelection)
 
   const [selectedFlowId, setSelectedFlowId] = useState<string | null>(null)
   const [editingFlow, setEditingFlow] = useState<Flow | null>(null)
@@ -41,12 +50,18 @@ export default function FlowsPage(): React.JSX.Element {
     void fetchFlows()
   }, [fetchFlows])
 
-  // Select the first flow once summaries arrive and nothing is selected.
+  // Honor a selection requested by another surface (e.g. a workspace card),
+  // then fall back to the first flow.
   useEffect(() => {
+    if (pendingFlowSelectionId) {
+      setSelectedFlowId(pendingFlowSelectionId)
+      setPendingFlowSelection(null)
+      return
+    }
     if (!selectedFlowId && flowSummaries.length > 0) {
       setSelectedFlowId(flowSummaries[0].id)
     }
-  }, [flowSummaries, selectedFlowId])
+  }, [flowSummaries, pendingFlowSelectionId, selectedFlowId, setPendingFlowSelection])
 
   // Load the full flow whenever the selection changes.
   useEffect(() => {
@@ -249,6 +264,32 @@ export default function FlowsPage(): React.JSX.Element {
     }
   }, [deleteFlow, editingFlow, flowSummaries])
 
+  const handleOpenNodeRun = useCallback(
+    (nodeRun: FlowNodeRun) => {
+      const outcome = openFlowNodeRun({
+        nodeRun,
+        store: useAppStore.getState(),
+        activateWorktree: (worktreeId) => activateAndRevealWorktree(worktreeId) !== false
+      })
+      if (outcome.kind === 'unavailable') {
+        toast.error(
+          translate('auto.components.flows.FlowsPage.9a4c17be23', 'Workspace is not available.')
+        )
+        return
+      }
+      closeFlowsPage()
+      if (outcome.kind === 'workspace-without-pane') {
+        toast.message(
+          translate(
+            'auto.components.flows.FlowsPage.4d81f0aa72',
+            'Run terminal is no longer available — opened the workspace instead.'
+          )
+        )
+      }
+    },
+    [closeFlowsPage]
+  )
+
   const validation = useMemo(
     () => (editingFlow ? validateFlowGraph(editingFlow) : null),
     [editingFlow]
@@ -345,12 +386,7 @@ export default function FlowsPage(): React.JSX.Element {
               collapsed={historyCollapsed}
               onToggleCollapsed={() => setHistoryCollapsed((current) => !current)}
               onSelectRun={flowRuns.selectRun}
-              onOpenNodeWorkspace={(nodeRun) => {
-                if (nodeRun.workspaceId) {
-                  setActiveWorktree(nodeRun.workspaceId)
-                  closeFlowsPage()
-                }
-              }}
+              onOpenNodeWorkspace={handleOpenNodeRun}
             />
           </div>
         ) : (

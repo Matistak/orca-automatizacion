@@ -1,8 +1,8 @@
 import {
   finishAutomationWorkspaceProvenanceRequest,
-  releaseAutomationWorkspaceProvenanceRequest,
-  resolveAutomationWorkspaceProvenance
+  releaseAutomationWorkspaceProvenanceRequest
 } from '../../../automations/workspace-provenance'
+import { resolveSystemRunWorkspaceProvenance } from '../../../workspace-run-provenance'
 import { buildCliWorkspaceProvenance } from '../../../../shared/cli-workspace-provenance'
 import { defineMethod, type RpcMethod } from '../core'
 import { resolveRuntimeNavigationTarget } from '../../../../shared/runtime-navigation'
@@ -83,7 +83,7 @@ export const WORKTREE_METHODS: RpcMethod[] = [
       // worktree instead of spawning a duplicate. No key (desktop/CLI) runs plainly.
       runtime.dedupeWorktreeCreate(params.repo, params.clientMutationId, async () => {
         const repo = await runtime.showRepo(params.repo)
-        const automationProvenance = resolveAutomationWorkspaceProvenance({
+        const automationProvenance = resolveSystemRunWorkspaceProvenance({
           authority: runtime,
           repoSelector: params.repo,
           repo,

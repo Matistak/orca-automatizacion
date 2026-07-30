@@ -7,7 +7,7 @@ import { existsSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import type { Store } from '../persistence'
 import type {
-  AutomationWorkspaceProvenance,
+  SystemRunWorkspaceProvenance,
   CliWorkspaceProvenance,
   CreateWorktreeArgs,
   CreateWorktreeResult,
@@ -68,7 +68,7 @@ import {
 } from './ssh-worktree-create-root-registration'
 
 type CreateWorktreeArgsWithSystemProvenance = CreateWorktreeArgs & {
-  automationProvenance?: AutomationWorkspaceProvenance
+  automationProvenance?: SystemRunWorkspaceProvenance
   cliProvenance?: CliWorkspaceProvenance
 }
 import {

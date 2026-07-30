@@ -1,38 +1,41 @@
-import type { AutomationRun } from '../../../../shared/automations-types'
-import { parsePaneKey } from '../../../../shared/stable-pane-id'
-import type { TerminalLayoutSnapshot, TerminalPaneLayoutNode } from '../../../../shared/types'
+import { parsePaneKey } from '../../../shared/stable-pane-id'
+import type { TerminalLayoutSnapshot, TerminalPaneLayoutNode } from '../../../shared/types'
 
-export type AutomationRunPaneTarget = {
+// Shared by automation runs and flow node runs — both persist the same pane identity.
+export type RunPaneIdentity = {
+  terminalPaneKey: string | null
+  terminalPtyId: string | null
+}
+
+export type RunPaneTarget = {
   tabId: string
   paneKey: string
   leafId: string
   ptyId: string
 }
 
-export function getAutomationRunOpenTabId(
-  run: Pick<AutomationRun, 'terminalPaneKey'>
-): string | null {
+export function getRunPaneOpenTabId(run: Pick<RunPaneIdentity, 'terminalPaneKey'>): string | null {
   return parsePaneKey(run.terminalPaneKey ?? '')?.tabId ?? null
 }
 
-export function automationRunMatchesPaneKey(
-  run: Pick<AutomationRun, 'terminalPaneKey'>,
+export function runMatchesPaneKey(
+  run: Pick<RunPaneIdentity, 'terminalPaneKey'>,
   paneKey: string
 ): boolean {
   return run.terminalPaneKey ? paneKey === run.terminalPaneKey : false
 }
 
-export function resolveAutomationRunOpenTarget({
+export function resolveRunPaneOpenTarget({
   run,
   terminalTabExists,
   currentLayout,
   livePtyIds
 }: {
-  run: AutomationRun
+  run: RunPaneIdentity
   terminalTabExists: boolean
   currentLayout: TerminalLayoutSnapshot | null | undefined
   livePtyIds: readonly string[]
-}): AutomationRunPaneTarget | null {
+}): RunPaneTarget | null {
   const parsed = parsePaneKey(run.terminalPaneKey ?? '')
   if (!terminalTabExists || !parsed || !run.terminalPtyId || !currentLayout?.root) {
     return null
@@ -55,20 +58,20 @@ export function resolveAutomationRunOpenTarget({
   }
 }
 
-export function canOpenAutomationRunOpenTarget(args: {
-  run: AutomationRun
+export function canOpenRunPaneTarget(args: {
+  run: RunPaneIdentity
   terminalTabExists: boolean
   currentLayout: TerminalLayoutSnapshot | null | undefined
   livePtyIds: readonly string[]
 }): boolean {
-  return resolveAutomationRunOpenTarget(args) !== null
+  return resolveRunPaneOpenTarget(args) !== null
 }
 
-export function buildAutomationRunOpenLayout({
+export function buildRunPaneOpenLayout({
   target,
   currentLayout
 }: {
-  target: AutomationRunPaneTarget
+  target: RunPaneTarget
   currentLayout: TerminalLayoutSnapshot
 }): TerminalLayoutSnapshot {
   return {

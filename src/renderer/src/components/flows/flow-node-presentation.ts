@@ -12,67 +12,87 @@ export type FlowNodeKindMeta = {
 }
 
 // Why: ordered so the palette lists triggers first, then actions, then branching.
-export const FLOW_NODE_KIND_META: readonly FlowNodeKindMeta[] = [
+// Labels are resolved per call, never at module load — importing this file must
+// not evaluate translate() before i18n is initialized (and a language switch has
+// to re-read them).
+const FLOW_NODE_KINDS: readonly {
+  kind: FlowNodeKind
+  titleKey: string
+  titleFallback: string
+  descriptionKey: string
+  descriptionFallback: string
+  icon: LucideIcon
+  isTrigger: boolean
+}[] = [
   {
     kind: 'trigger-manual',
-    title: translate('auto.components.flows.flow.node.presentation.7f72256204', 'Manual trigger'),
-    description: translate(
-      'auto.components.flows.flow.node.presentation.8926d60e5c',
-      'Entry point for a flow you run on demand.'
-    ),
+    titleKey: 'auto.components.flows.flow.node.presentation.7f72256204',
+    titleFallback: 'Manual trigger',
+    descriptionKey: 'auto.components.flows.flow.node.presentation.8926d60e5c',
+    descriptionFallback: 'Entry point for a flow you run on demand.',
     icon: Play,
     isTrigger: true
   },
   {
     kind: 'trigger-schedule',
-    title: translate('auto.components.flows.flow.node.presentation.2a6e380359', 'Schedule trigger'),
-    description: translate(
-      'auto.components.flows.flow.node.presentation.f5aafd203e',
-      'Run the flow on a recurring schedule.'
-    ),
+    titleKey: 'auto.components.flows.flow.node.presentation.2a6e380359',
+    titleFallback: 'Schedule trigger',
+    descriptionKey: 'auto.components.flows.flow.node.presentation.f5aafd203e',
+    descriptionFallback: 'Run the flow on a recurring schedule.',
     icon: Clock,
     isTrigger: true
   },
   {
     kind: 'agent-prompt',
-    title: translate('auto.components.flows.flow.node.presentation.e75b30e1ef', 'Agent prompt'),
-    description: translate(
-      'auto.components.flows.flow.node.presentation.0d4b0c7865',
-      'Run a coding agent with a prompt.'
-    ),
+    titleKey: 'auto.components.flows.flow.node.presentation.e75b30e1ef',
+    titleFallback: 'Agent prompt',
+    descriptionKey: 'auto.components.flows.flow.node.presentation.0d4b0c7865',
+    descriptionFallback: 'Run a coding agent with a prompt.',
     icon: Bot,
     isTrigger: false
   },
   {
     kind: 'shell-command',
-    title: translate('auto.components.flows.flow.node.presentation.79d41cb149', 'Shell command'),
-    description: translate(
-      'auto.components.flows.flow.node.presentation.077baa943d',
-      'Run a shell command (local or SSH).'
-    ),
+    titleKey: 'auto.components.flows.flow.node.presentation.79d41cb149',
+    titleFallback: 'Shell command',
+    descriptionKey: 'auto.components.flows.flow.node.presentation.077baa943d',
+    descriptionFallback: 'Run a shell command (local or SSH).',
     icon: Terminal,
     isTrigger: false
   },
   {
     kind: 'condition',
-    title: translate('auto.components.flows.flow.node.presentation.2eee86d56a', 'Condition'),
-    description: translate(
-      'auto.components.flows.flow.node.presentation.e019c0d582',
-      'Branch on the previous node result.'
-    ),
+    titleKey: 'auto.components.flows.flow.node.presentation.2eee86d56a',
+    titleFallback: 'Condition',
+    descriptionKey: 'auto.components.flows.flow.node.presentation.e019c0d582',
+    descriptionFallback: 'Branch on the previous node result.',
     icon: GitBranch,
     isTrigger: false
   }
 ]
 
-const META_BY_KIND = new Map(FLOW_NODE_KIND_META.map((meta) => [meta.kind, meta]))
+export function listFlowNodeKindMeta(): FlowNodeKindMeta[] {
+  return FLOW_NODE_KINDS.map((entry) => ({
+    kind: entry.kind,
+    title: translate(entry.titleKey, entry.titleFallback),
+    description: translate(entry.descriptionKey, entry.descriptionFallback),
+    icon: entry.icon,
+    isTrigger: entry.isTrigger
+  }))
+}
 
 export function getFlowNodeKindMeta(kind: FlowNodeKind): FlowNodeKindMeta {
-  const meta = META_BY_KIND.get(kind)
-  if (!meta) {
+  const entry = FLOW_NODE_KINDS.find((candidate) => candidate.kind === kind)
+  if (!entry) {
     throw new Error(`Unknown flow node kind: ${kind}`)
   }
-  return meta
+  return {
+    kind: entry.kind,
+    title: translate(entry.titleKey, entry.titleFallback),
+    description: translate(entry.descriptionKey, entry.descriptionFallback),
+    icon: entry.icon,
+    isTrigger: entry.isTrigger
+  }
 }
 
 /** A fresh default config for a newly-dropped node of the given kind. */

@@ -202,6 +202,7 @@ describe('worktree RPC methods', () => {
         repo: 'repo-1',
         name: 'automation-workspace',
         automationProvenanceRequest: {
+          kind: 'automation',
           automationId: 'automation-1',
           automationRunId: 'run-1',
           dispatchToken,
@@ -216,6 +217,7 @@ describe('worktree RPC methods', () => {
         repo: 'repo-1',
         name: 'automation-workspace-replay',
         automationProvenanceRequest: {
+          kind: 'automation',
           automationId: 'automation-1',
           automationRunId: 'run-1',
           dispatchToken,
@@ -291,6 +293,7 @@ describe('worktree RPC methods', () => {
         repo: 'repo-runtime',
         name: 'runtime-automation-workspace',
         automationProvenanceRequest: {
+          kind: 'automation',
           automationId: 'automation-runtime',
           automationRunId: 'run-runtime',
           dispatchToken,
@@ -354,6 +357,7 @@ describe('worktree RPC methods', () => {
         repo: 'repo-1',
         name: 'edited-automation-workspace',
         automationProvenanceRequest: {
+          kind: 'automation',
           automationId: 'automation-edited',
           automationRunId: 'run-edited',
           dispatchToken,
@@ -406,6 +410,7 @@ describe('worktree RPC methods', () => {
     } as unknown as OrcaRuntimeService
     const dispatcher = new RpcDispatcher({ runtime, methods: WORKTREE_METHODS })
     const automationProvenanceRequest = {
+      kind: 'automation' as const,
       automationId: 'automation-retry',
       automationRunId: 'run-retry',
       dispatchToken,
@@ -472,6 +477,7 @@ describe('worktree RPC methods', () => {
         repo: 'repo-1',
         name: 'manual-workspace',
         automationProvenanceRequest: {
+          kind: 'automation',
           automationId: 'automation-1',
           automationRunId: 'run-1',
           dispatchToken: 'forged-token',

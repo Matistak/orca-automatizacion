@@ -183,7 +183,7 @@ export function registerCoreHandlers(
   if (automations) {
     registerAutomationHandlers(store, automations)
   }
-  registerFlowHandlers(store)
+  registerFlowHandlers(store, { claudeUsage, codexUsage })
   if (keybindings) {
     registerKeybindingHandlers(keybindings, () => {
       void pluginService?.reconcileActivationState()

@@ -33,8 +33,16 @@ export function useFlowDispatchEvents(): void {
         try {
           await dispatchAutomationRun({
             ...synthesized,
-            // Why: flow nodes are not stored automations, so they cannot prove
-            // workspace provenance; the workspace is created untagged.
+            // Proves the created workspace against the live flow run, so it gets
+            // the same origin badge and sidebar filtering as automation runs.
+            buildProvenanceRequest: (createRequestId) => ({
+              kind: 'flow',
+              flowId: request.flowId,
+              flowRunId: request.flowRunId,
+              nodeId: request.nodeId,
+              dispatchToken: request.dispatchToken,
+              createRequestId
+            }),
             markDispatchResult: async (result) => {
               await report({
                 flowRunId: request.flowRunId,

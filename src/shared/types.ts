@@ -535,7 +535,7 @@ export type Worktree = {
   workspaceStatus?: WorkspaceStatus
   diffComments?: DiffComment[]
   mobileDiffReview?: MobileDiffReviewState
-  automationProvenance?: AutomationWorkspaceProvenance
+  automationProvenance?: SystemRunWorkspaceProvenance
   cliProvenance?: CliWorkspaceProvenance
 } & GitWorktreeInfo
 
@@ -566,12 +566,47 @@ export type AutomationWorkspaceProvenance = {
   hostId?: ExecutionHostId
 }
 
+/** Provenance for workspaces created by an `agent-prompt` node of a flow run.
+ *  Distinct from automation provenance because a flow node is not a persisted
+ *  Automation — it is authorized against the flow run instead. */
+export type FlowWorkspaceProvenance = {
+  kind: 'created-by-flow'
+  flowId: string
+  flowNameSnapshot: string
+  flowRunId: string
+  flowRunNumber: number | null
+  nodeId: string
+  nodeLabelSnapshot: string
+  createdAt: number
+  projectId: string
+  repoId?: string
+  hostId?: ExecutionHostId
+}
+
+/** Either origin marker written into `Worktree.automationProvenance`; both mean
+ *  "Orca created this workspace for an unattended run". */
+export type SystemRunWorkspaceProvenance = AutomationWorkspaceProvenance | FlowWorkspaceProvenance
+
 export type AutomationWorkspaceProvenanceRequest = {
+  kind: 'automation'
   automationId: string
   automationRunId: string
   dispatchToken: string
   createRequestId: string
 }
+
+export type FlowWorkspaceProvenanceRequest = {
+  kind: 'flow'
+  flowId: string
+  flowRunId: string
+  nodeId: string
+  dispatchToken: string
+  createRequestId: string
+}
+
+export type SystemRunWorkspaceProvenanceRequest =
+  | AutomationWorkspaceProvenanceRequest
+  | FlowWorkspaceProvenanceRequest
 
 export type GitPushTarget = {
   remoteName: string
@@ -659,8 +694,9 @@ export type WorktreeMeta = {
    *  them. Self-prunes when the worktree is deleted. */
   priorWorktreeIds?: string[]
   mobileDiffReview?: MobileDiffReviewState
-  /** System-owned provenance for workspaces created by automation new-per-run dispatches. */
-  automationProvenance?: AutomationWorkspaceProvenance
+  /** System-owned provenance for workspaces created by an automation new-per-run
+   *  dispatch or by a flow's agent node. */
+  automationProvenance?: SystemRunWorkspaceProvenance
   /** System-owned provenance for workspaces created via `orca worktree create`. */
   cliProvenance?: CliWorkspaceProvenance
 }
@@ -2248,8 +2284,8 @@ export type CreateWorktreeArgs = {
    *  creation in the renderer, so concurrent background creates each drive
    *  their own status surface. Omitted by synchronous callers. */
   creationId?: string
-  /** Authorizes the host to mint system-owned automation provenance. */
-  automationProvenanceRequest?: AutomationWorkspaceProvenanceRequest
+  /** Authorizes the host to mint system-owned automation or flow provenance. */
+  automationProvenanceRequest?: SystemRunWorkspaceProvenanceRequest
 }
 
 export type CreateWorktreeResult = {

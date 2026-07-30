@@ -1,6 +1,6 @@
 import type { ExecutionHostId } from '../../../../shared/execution-host'
 import type {
-  AutomationWorkspaceProvenance,
+  SystemRunWorkspaceProvenance,
   CliWorkspaceProvenance,
   IssueInfo
 } from '../../../../shared/types'
@@ -30,7 +30,7 @@ export type WorktreeCardMetaBadgesProps = {
   linearIssue: WorktreeCardLinearIssueDisplay | null
   review: WorktreeCardPrDisplay | null
   comment: string | null
-  automationProvenance?: AutomationWorkspaceProvenance | null
+  automationProvenance?: SystemRunWorkspaceProvenance | null
   cliProvenance?: CliWorkspaceProvenance | null
 }
 
@@ -57,5 +57,7 @@ export type WorktreeCardDetailsHoverProps = WorktreeCardMetaBadgesProps & {
   onUnlinkReview?: () => void
   onOpenAutomation?: (event: React.MouseEvent) => void
   onOpenAutomationRun?: (event: React.MouseEvent) => void
+  /** Opens the flow that created this workspace, when a flow node did. */
+  onOpenFlow?: (event: React.MouseEvent) => void
   hoverControl?: WorktreeCardDetailsHoverControl
 }

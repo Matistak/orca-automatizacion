@@ -19,6 +19,7 @@
 | 3 — Motor de ejecución del DAG (MVP) | ✅ Hecho | `FlowExecutionEngine` + validación/topo/condición/interpolación, dispatcher abstracto. 29 tests · typecheck 0 · lint OK. |
 | 4 — Editor visual de nodos (UI) | ✅ Hecho | `@xyflow/react` instalado. Vista `flows` cableada, canvas + paleta + inspector + autosave + validación en vivo. `flow-graph` movido a `shared/`. typecheck (node/cli/web) 0 · lint OK. |
 | 5 — Ejecución desde UI + observabilidad | ✅ Hecho | `flows:runNow` + `FlowRunService`, dispatcher shell (main) y agent (renderer, reusando el coordinador de automatizaciones), overlay de estado en vivo, historial y detalle de run. 45 tests flows · typecheck 0 · lint OK. |
+| 5.5 — Cierre de observabilidad y provenance | ✅ Hecho | `kind: 'created-by-flow'` validado contra el `FlowRun`, "Open" enfoca el panel exacto, tokens/coste recolectados. 62 tests flows · typecheck 0 · lint OK. |
 | 6 — Integración con el scheduler | ⬜ Pendiente | |
 | 7 — Preparación SQLite + pulido | ⬜ Pendiente | |
 
@@ -379,14 +380,134 @@ coordenadas → el motor es testeable sin UI.
   + `lib/automation-run-agent-session.ts` + `lib/automation-run-completion-tracker.ts`.
   Esto además **elimina** el `eslint-disable max-lines` que arrastraba el hook.
 
-**Limitaciones conocidas (deuda explícita):**
+**Limitaciones conocidas (deuda explícita):** las tres quedaron **cerradas en la Etapa 5.5**.
 - Los workspaces creados por un nodo de agente **no llevan provenance** de automatización:
   `resolveAutomationWorkspaceProvenance` exige una `Automation` persistida y un nodo de flujo
-  no lo es. Habría que extender el token/provenance a flujos (candidato para Etapa 6/7).
+  no lo es.
 - "Open" en el detalle de run navega al workspace del nodo; **no** restaura el panel/PTY exacto
   (`resolveAutomationRunOpenTarget`), que sigue siendo específico de automatizaciones.
-- La recolección de tokens/coste (`run-usage-collection`) aún no se ejecuta para nodos de flujo:
-  el `usage` se muestra si el dispatch lo reporta, pero no hay atribución por ventana de sesión.
+- La recolección de tokens/coste (`run-usage-collection`) **nunca corre** para nodos de flujo, y
+  ningún dispatch reporta `usage` → el bloque de tokens/coste de `FlowRunHistory` es UI muerta.
+
+---
+
+### Etapa 5.5 — Cierre de observabilidad y provenance
+
+**Objetivo:** cerrar los tres huecos que dejó la Etapa 5. El punto 1 es **bloqueante para la
+Etapa 6**: un `trigger-schedule` diario con un nodo `new_per_run` acumula un workspace por día,
+invisible al filtro de la sidebar y a la limpieza segura de no registrados.
+
+#### 1. Provenance de workspaces creados por un nodo de agente
+
+- [x] Nuevo tipo `FlowWorkspaceProvenance` (`kind: 'created-by-flow'`) en `shared/types.ts` con
+      `flowId`/`flowNameSnapshot`/`flowRunId`/`flowRunNumber`/`nodeId`/`nodeLabelSnapshot` +
+      `projectId`/`repoId`/`hostId`. Se escribe en el mismo campo `Worktree.automationProvenance`,
+      ahora tipado como `SystemRunWorkspaceProvenance` (unión de los dos orígenes) — un solo campo,
+      un solo badge, un solo filtro. Builder en `shared/flow-workspace-provenance.ts`.
+      `worktree-metadata-merge.ts` no necesitó cambios: pasa el metadato tal cual.
+- [x] Request: `FlowWorkspaceProvenanceRequest` (`kind: 'flow'`) y `AutomationWorkspaceProvenanceRequest`
+      pasa a llevar `kind: 'automation'`; el schema zod de `worktree.create` es ahora una
+      `discriminatedUnion('kind', …)`. Un solo campo de request, así el coordinador del renderer
+      (`dispatch-automation-run` → `automation-run-workspace-preparation`) no necesitó una segunda
+      vía paralela.
+- [x] `resolveFlowWorkspaceProvenance` (`main/flows/flow-workspace-provenance.ts`) valida contra
+      `getFlowRun(runId)`: run existe, `flowId` coincide, run en `running`, el nodo sigue en el
+      **snapshot congelado** siendo `agent-prompt` + `new_per_run`, su node-run **no** está en un
+      estado final (eso es lo que evita que un request repetido mine un segundo workspace), repo
+      selector = `projectId` del nodo, y el `dispatchToken` contra el registro real.
+      _Nota: no se valida "node-run en `dispatching`" como decía el borrador — el engine persiste el
+      node-run **después** de que el nodo resuelve, así que en el momento de crear el workspace
+      todavía no existe. La condición correcta es "no finalizado"._
+- [x] Router único `main/workspace-run-provenance.ts` para los dos handlers de create
+      (`ipc/worktrees.ts`, `rpc/methods/worktree.ts`); la autoridad de automatizaciones queda
+      intacta. `OrcaRuntime.getFlowRun()` añadido como autoridad de flujos.
+- [x] `useFlowDispatchEvents` ya pasa `buildProvenanceRequest` (comentario de deuda eliminado);
+      el `dispatchToken` que emitía `renderer-flow-node-dispatcher.ts` **ahora sí se consume**.
+- [x] Consumidores: badge propio ("Created by flow", icono `Workflow`) en `WorktreeCardMetaBadges`;
+      `isAutomationGeneratedWorkspace` cubre ambos `kind`, con lo que el filtro de la sidebar
+      (`visible-worktrees.ts:184`), el jump palette (`WorktreeJumpPalette.tsx:493`) y el auto-clear
+      de filtros al revelar (`worktree-activation.ts`) quedan cubiertos de una sola vez.
+      `worktree-removal-safety` es kind-agnóstico (mira la clave, no el `kind`) → sin cambios.
+- [x] Sección de detalle propia (`WorktreeCardFlowDetailSection`) con nombre del flujo, run + nodo,
+      aviso si el flujo ya no existe y acción "Open flow" que abre la página de flujos **con ese
+      flujo seleccionado** (nuevo `pendingFlowSelectionId` en el slice).
+- [x] **Tests:** 9 de `resolveFlowWorkspaceProvenance` (provenance válida; rechazo por run
+      inexistente / run terminado / nodo fuera del snapshot / nodo no `new_per_run` / node-run ya
+      final / repo selector distinto / token inválido / reutilización del token) + filtro de sidebar
+      ocultando workspaces de flujo. Los 6 literales de request de `worktree.test.ts` recibieron el
+      discriminador `kind`.
+
+#### 2. "Open" restaura el panel/PTY exacto
+
+- [x] Módulo movido a `lib/run-pane-open-target.ts` con nombres neutrales
+      (`resolveRunPaneOpenTarget`/`buildRunPaneOpenLayout`/`getRunPaneOpenTabId`/
+      `runMatchesPaneKey`/`canOpenRunPaneTarget`) y el parámetro relajado a `RunPaneIdentity`
+      (`terminalPaneKey`+`terminalPtyId`), que es lo único que el resolver lee — así sirve a
+      `AutomationRun` y a `FlowNodeRun` sin duplicar lógica.
+- [x] `open-flow-node-run.ts`: resuelve el target, aplica el layout con el leaf enfocado y activa
+      el workspace vía `activateAndRevealWorktree` (antes era `setActiveWorktree`, que no crea la
+      terminal). Devuelve `pane` / `workspace-without-pane` / `unavailable`.
+- [x] **Fallback cuando el pane murió:** `workspace-without-pane` → abre el workspace y avisa con
+      un toast ("Run terminal is no longer available…"), en lugar de aterrizar sin pista.
+- [x] **Tests:** 6 de `open-flow-node-run` (pane enfocado, pty muerto, tab cerrada, nodo sin pane,
+      sin workspace, activación fallida) + los 9 del módulo movido. 15 verdes.
+
+#### 3. Tokens y coste para nodos de flujo
+
+- [x] Los usage stores ya llegaban a `registerCoreHandlers`; solo hubo que pasarlos a
+      `registerFlowHandlers(store, { claudeUsage, codexUsage })` → `FlowRunService` →
+      `RendererFlowNodeDispatcher`.
+- [x] `collectAutomationRunUsage` **no necesita una `Automation` falsa**: se estrecharon sus
+      parámetros a `UsageCollectionAutomation` (`agentId`+`executionTargetType`) y
+      `UsageCollectionRun` (`status`/`workspaceId`/`terminalSessionId`/`startedAt`). Los llamadores
+      de automatizaciones siguen pasando los objetos completos sin cambios.
+- [x] `flow-node-usage-collection.ts`: recolecta solo para nodos `agent-prompt` `completed` con
+      workspace, y **devuelve `null` si el dispatch ya reportó usage** — ese es el guard
+      anti-doble-recolección, más simple que el de `service.ts:148` porque la recolección ocurre
+      una sola vez, donde el nodo se resuelve.
+- [x] La ventana temporal arranca cuando el dispatcher pide el nodo al renderer (`startedAt`), y un
+      fallo del collector nunca tumba un nodo que sí terminó (se loguea y se sigue).
+- [x] **Tests:** 6 de `flow-node-usage-collection` (claude/codex, ya reportado, nodo no-agente, no
+      completado / sin workspace, store ausente → `unavailable`) + 2 de wiring en el dispatcher.
+      53 tests de flows verdes.
+
+_Limitación consciente: `executionTargetType` se fija a `'local'` porque un nodo de flujo siempre
+despacha por el renderer local. Un workspace remoto simplemente no encuentra filas de uso locales y
+cae en `unavailable`, en vez de reportar un número equivocado._
+
+#### Arreglos colaterales (bugs de flows que la suite completa destapó)
+
+- [x] `register-core-handlers.test.ts` fallaba desde la Etapa 5: `registerFlowHandlers` llama
+      `ipcMain.handle` al registrarse y el mock de `electron` de ese test solo exponía `app`.
+      Verificado con `git stash` que era preexistente. Se añadió `ipcMain` al mock.
+- [x] `flow-node-presentation.ts` evaluaba `translate()` **en carga de módulo** (10 sitios en la
+      constante `FLOW_NODE_KIND_META`), lo que violaba el gate `no-top-level-translate`: los títulos
+      de nodo quedaban congelados en el idioma activo al importar y podían resolverse antes de que
+      i18n estuviera inicializado. Ahora son `listFlowNodeKindMeta()` / `getFlowNodeKindMeta()`, que
+      traducen en cada llamada con las mismas claves.
+
+**Entregable:** un workspace creado por un flujo se distingue y se filtra como tal; "Open" enfoca
+el panel exacto; el detalle de run muestra tokens/coste reales. ✅ **HECHO**
+(typecheck node/cli/web 0 · lint + los 8 gates OK · 62 tests de flows · 113 con las suites del
+renderer tocadas)
+
+**Archivos tocados:**
+- Shared: `src/shared/types.ts` (`FlowWorkspaceProvenance`, `SystemRunWorkspaceProvenance`,
+  requests + unión), `src/shared/flow-workspace-provenance.ts` (nuevo)
+- Main: `src/main/flows/{flow-workspace-provenance,flow-node-usage-collection}.ts` (+ tests),
+  `flow-run-service.ts`, `renderer-flow-node-dispatcher.ts` (+ test),
+  `src/main/workspace-run-provenance.ts` (nuevo), `automations/{workspace-provenance,
+  run-usage-collection}.ts`, `ipc/{flows,register-core-handlers,worktrees,worktree-remote}.ts`,
+  `runtime/orca-runtime.ts` (`getFlowRun`), `runtime/rpc/methods/{worktree,worktree-schemas}.ts`
+- Renderer: `lib/run-pane-open-target.ts` (movido desde `components/automations/`, + test),
+  `components/flows/{open-flow-node-run.ts,FlowsPage.tsx,flow-node-presentation.ts,NodePalette.tsx}`,
+  `components/sidebar/{WorktreeCardFlowDetailSection.tsx,WorktreeCard.tsx,WorktreeCardMeta.tsx,
+  WorktreeCardMetaBadges.tsx,worktree-card-meta-types.ts,visible-worktrees.ts}`,
+  `lib/{worktree-activation,dispatch-automation-run,automation-run-workspace-preparation}.ts`,
+  `hooks/{useFlowDispatchEvents,useAutomationDispatchEvents}.ts`, `store/slices/flows.ts`,
+  `components/automations/AutomationsPage.tsx`, locales (6 claves nuevas × 5 idiomas)
+
+---
 
 ### Etapa 6 — Integración con el scheduler
 
@@ -537,7 +658,8 @@ tokens existente, no inventar colores:**
 ```
 Etapa 0 (andamiaje) → Etapa 1 (datos) → Etapa 2 (IPC) → Etapa 3 (motor, MVP lineal) ★
     ★ punto de "probar que funciona"
-→ Etapa 4 (canvas UI) → Etapa 5 (ejecución+observabilidad UI) → Etapa 6 (scheduler)
+→ Etapa 4 (canvas UI) → Etapa 5 (ejecución+observabilidad UI)
+→ Etapa 5.5 (provenance + observabilidad; provenance bloquea la 6) → Etapa 6 (scheduler)
 → Etapa 7 (spike SQLite + pulido)
 ```
 

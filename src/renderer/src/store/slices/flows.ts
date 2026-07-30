@@ -10,6 +10,10 @@ import type { AppState } from '../types'
 
 export type FlowSlice = {
   flowSummaries: FlowSummary[]
+  /** Flow the Flows page should open on, set when navigating from elsewhere
+   *  (e.g. a workspace created by one of its nodes). Consumed once. */
+  pendingFlowSelectionId: string | null
+  setPendingFlowSelection: (flowId: string | null) => void
   fetchFlows: () => Promise<void>
   getFlow: (id: string) => Promise<Flow | undefined>
   createFlow: (input: FlowCreateInput) => Promise<Flow>
@@ -21,6 +25,11 @@ export type FlowSlice = {
 
 export const createFlowSlice: StateCreator<AppState, [], [], FlowSlice> = (set) => ({
   flowSummaries: [],
+  pendingFlowSelectionId: null,
+
+  setPendingFlowSelection: (flowId) => {
+    set({ pendingFlowSelectionId: flowId })
+  },
 
   fetchFlows: async () => {
     try {

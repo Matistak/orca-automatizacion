@@ -7,6 +7,7 @@ import type {
 } from '../../shared/flows-types'
 import { createAutomationDispatchToken } from '../automations/dispatch-tokens'
 import type { FlowExecutionContext, FlowNodeResult } from './flow-node-dispatcher'
+import type { FlowNodeUsageCollector } from './flow-node-usage-collection'
 import type { FlowRepository } from './flow-repository'
 
 type PendingNode = {
@@ -43,7 +44,8 @@ export class RendererFlowNodeDispatcher {
 
   constructor(
     private readonly repository: FlowRepository,
-    private readonly getWebContents: () => WebContents | null
+    private readonly getWebContents: () => WebContents | null,
+    private readonly collectUsage: FlowNodeUsageCollector | null = null
   ) {}
 
   async dispatchAgentNode(args: {
@@ -75,8 +77,30 @@ export class RendererFlowNodeDispatcher {
     const settled = new Promise<FlowNodeResult>((resolve) => {
       this.pending.set(key, { resolve })
     })
+    // Why: the collector attributes usage by session time window, so the clock
+    // starts when the renderer is asked to launch the agent.
+    const startedAt = Date.now()
     webContents.send('flows:nodeDispatchRequested', request)
-    return await settled
+    const result = await settled
+    return await this.withUsage({ node: args.node, result, startedAt })
+  }
+
+  private async withUsage(args: {
+    node: FlowNode
+    result: FlowNodeResult
+    startedAt: number
+  }): Promise<FlowNodeResult> {
+    if (!this.collectUsage) {
+      return args.result
+    }
+    try {
+      const usage = await this.collectUsage(args)
+      return usage ? { ...args.result, usage } : args.result
+    } catch (error) {
+      // Usage is observability, never a reason to fail a node that succeeded.
+      console.error('[flows] failed to collect node usage:', error)
+      return args.result
+    }
   }
 
   /** Called from the IPC handler when the renderer reports node progress. */

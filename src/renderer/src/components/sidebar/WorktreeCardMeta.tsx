@@ -26,6 +26,7 @@ import type {
 import { translate } from '@/i18n/i18n'
 import { WorktreeCardReviewDetailSection } from './WorktreeCardReviewDetailSection'
 import { WorktreeCardAutomationDetailSection } from './WorktreeCardAutomationDetailSection'
+import { WorktreeCardFlowDetailSection } from './WorktreeCardFlowDetailSection'
 import { WorktreeCardCliDetailSection } from './WorktreeCardCliDetailSection'
 import { WorktreeCardIssueDetailSection } from './WorktreeCardIssueDetailSection'
 import { WorktreeCardHoverIdentityHeader } from './WorktreeCardHoverIdentityHeader'
@@ -72,6 +73,7 @@ export function WorktreeCardDetailsHover({
   onUnlinkReview,
   onOpenAutomation,
   onOpenAutomationRun,
+  onOpenFlow,
   hoverControl
 }: WorktreeCardDetailsHoverProps): React.JSX.Element {
   const internalHoverControl = useWorktreeCardDetailsHoverControl()
@@ -277,7 +279,7 @@ export function WorktreeCardDetailsHover({
             closeHover={closeHover}
           />
 
-          {automationProvenance && (
+          {automationProvenance?.kind === 'created-by-automation' && (
             <WorktreeCardAutomationDetailSection
               provenance={automationProvenance}
               worktreeHostId={automationHostId}
@@ -285,6 +287,13 @@ export function WorktreeCardDetailsHover({
               onOpenAutomationRun={
                 onOpenAutomationRun ? dismissAndRun(onOpenAutomationRun) : undefined
               }
+            />
+          )}
+
+          {automationProvenance?.kind === 'created-by-flow' && (
+            <WorktreeCardFlowDetailSection
+              provenance={automationProvenance}
+              onOpenFlow={onOpenFlow ? dismissAndRun(onOpenFlow) : undefined}
             />
           )}
 

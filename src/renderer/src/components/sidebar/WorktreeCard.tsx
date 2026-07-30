@@ -242,6 +242,8 @@ const WorktreeCard = React.memo(function WorktreeCard({
   const openTaskPage = useAppStore((s) => s.openTaskPage)
   const openAutomationsPage = useAppStore((s) => s.openAutomationsPage)
   const setPendingAutomationRunNavigation = useAppStore((s) => s.setPendingAutomationRunNavigation)
+  const openFlowsPage = useAppStore((s) => s.openFlowsPage)
+  const setPendingFlowSelection = useAppStore((s) => s.setPendingFlowSelection)
   const updateWorktreeMeta = useAppStore((s) => s.updateWorktreeMeta)
   const deleteFolderWorkspace = useAppStore((s) => s.deleteFolderWorkspace)
   const setActiveWorktree = useAppStore((s) => s.setActiveWorktree)
@@ -290,7 +292,9 @@ const WorktreeCard = React.memo(function WorktreeCard({
   const handleOpenAutomation = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation()
-      const automationId = worktree.automationProvenance?.automationId
+      const provenance = worktree.automationProvenance
+      const automationId =
+        provenance?.kind === 'created-by-automation' ? provenance.automationId : null
       if (!automationId) {
         return
       }
@@ -305,17 +309,29 @@ const WorktreeCard = React.memo(function WorktreeCard({
     [
       openAutomationsPage,
       setPendingAutomationRunNavigation,
-      worktree.automationProvenance?.automationId,
-      worktree.automationProvenance?.hostId,
+      worktree.automationProvenance,
       worktree.hostId
     ]
+  )
+
+  const handleOpenFlow = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      const provenance = worktree.automationProvenance
+      if (provenance?.kind !== 'created-by-flow') {
+        return
+      }
+      setPendingFlowSelection(provenance.flowId)
+      openFlowsPage()
+    },
+    [openFlowsPage, setPendingFlowSelection, worktree.automationProvenance]
   )
 
   const handleOpenAutomationRun = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation()
       const provenance = worktree.automationProvenance
-      if (!provenance) {
+      if (provenance?.kind !== 'created-by-automation') {
         return
       }
       const hostId = provenance.hostId ?? worktree.hostId
@@ -1273,6 +1289,7 @@ const WorktreeCard = React.memo(function WorktreeCard({
             }
             onOpenAutomation={affiliateListMode ? undefined : handleOpenAutomation}
             onOpenAutomationRun={affiliateListMode ? undefined : handleOpenAutomationRun}
+            onOpenFlow={affiliateListMode ? undefined : handleOpenFlow}
             // Why: compact mode hides the metadata badge row, so title hover carries the explicit-link affordance.
             onUnlinkReview={
               !affiliateListMode && hasExplicitLinkedReview ? handleUnlinkReview : undefined
@@ -1334,6 +1351,7 @@ const WorktreeCard = React.memo(function WorktreeCard({
         }
         onOpenAutomation={affiliateListMode ? undefined : handleOpenAutomation}
         onOpenAutomationRun={affiliateListMode ? undefined : handleOpenAutomationRun}
+        onOpenFlow={affiliateListMode ? undefined : handleOpenFlow}
         // Why: branch lookup can surface a review without persisted metadata; only unlink when explicitly linked.
         onUnlinkReview={
           !affiliateListMode && hasExplicitLinkedReview ? handleUnlinkReview : undefined
@@ -1837,6 +1855,7 @@ const WorktreeCard = React.memo(function WorktreeCard({
         }
         onOpenAutomation={affiliateListMode ? undefined : handleOpenAutomation}
         onOpenAutomationRun={affiliateListMode ? undefined : handleOpenAutomationRun}
+        onOpenFlow={affiliateListMode ? undefined : handleOpenFlow}
         // Why: branch lookup can surface a review without persisted metadata; only unlink when explicitly linked.
         onUnlinkReview={
           !affiliateListMode && hasExplicitLinkedReview ? handleUnlinkReview : undefined

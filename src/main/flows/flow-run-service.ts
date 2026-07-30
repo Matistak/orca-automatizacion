@@ -7,8 +7,11 @@ import type {
   FlowRunStatus,
   FlowRunTrigger
 } from '../../shared/flows-types'
+import type { ClaudeUsageStore } from '../claude-usage/store'
+import type { CodexUsageStore } from '../codex-usage/store'
 import type { Store } from '../persistence'
 import { FlowExecutionEngine } from './flow-execution-engine'
+import { createFlowNodeUsageCollector } from './flow-node-usage-collection'
 import type { FlowNodeDispatcher } from './flow-node-dispatcher'
 import type { FlowRepository } from './flow-repository'
 import { RendererFlowNodeDispatcher } from './renderer-flow-node-dispatcher'
@@ -61,12 +64,20 @@ export class FlowRunService {
 
   constructor(
     private readonly store: Store,
-    repository: FlowRepository
+    repository: FlowRepository,
+    opts: {
+      claudeUsage?: ClaudeUsageStore | null
+      codexUsage?: CodexUsageStore | null
+    } = {}
   ) {
     this.repository = new BroadcastingFlowRepository(repository, (run) => this.broadcastRun(run))
     this.rendererDispatcher = new RendererFlowNodeDispatcher(
       this.repository,
-      () => this.webContents
+      () => this.webContents,
+      createFlowNodeUsageCollector({
+        claudeUsage: opts.claudeUsage ?? null,
+        codexUsage: opts.codexUsage ?? null
+      })
     )
   }
 

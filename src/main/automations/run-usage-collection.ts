@@ -28,8 +28,15 @@ function createUnavailableAutomationUsage(
   }
 }
 
+/** Only the fields the collector reads — lets flow nodes reuse it without a fake Automation. */
+export type UsageCollectionAutomation = Pick<Automation, 'agentId' | 'executionTargetType'>
+export type UsageCollectionRun = Pick<
+  AutomationRun,
+  'status' | 'workspaceId' | 'terminalSessionId' | 'startedAt'
+>
+
 function getAutomationUsageProvider(
-  automation: Automation | undefined
+  automation: UsageCollectionAutomation | undefined
 ): AutomationRunUsage['provider'] {
   if (automation?.agentId === 'codex') {
     return 'codex'
@@ -46,8 +53,8 @@ export async function collectAutomationRunUsage({
   claudeUsage,
   codexUsage
 }: {
-  automation: Automation | undefined
-  run: AutomationRun
+  automation: UsageCollectionAutomation | undefined
+  run: UsageCollectionRun
   claudeUsage: ClaudeUsageStore | null
   codexUsage: CodexUsageStore | null
 }): Promise<AutomationRunUsage> {

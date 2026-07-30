@@ -17,7 +17,7 @@ import { projectResolvedWorktreeLineage } from '../../shared/resolved-worktree-l
 import { isPathInsideOrEqual, isWindowsAbsolutePathLike } from '../../shared/cross-platform-path'
 import { deleteWorktreeHistoryDir } from '../terminal-history'
 import type {
-  AutomationWorkspaceProvenance,
+  SystemRunWorkspaceProvenance,
   CliWorkspaceProvenance,
   CreateWorktreeArgs,
   CreateWorktreeResult,
@@ -126,9 +126,9 @@ import { getCohortAtEmit } from '../telemetry/cohort-classifier'
 import { workspaceSourceSchema, type WorkspaceSource } from '../../shared/telemetry-events'
 import {
   finishAutomationWorkspaceProvenanceRequest,
-  releaseAutomationWorkspaceProvenanceRequest,
-  resolveAutomationWorkspaceProvenance
+  releaseAutomationWorkspaceProvenanceRequest
 } from '../automations/workspace-provenance'
+import { resolveSystemRunWorkspaceProvenance } from '../workspace-run-provenance'
 import { shouldEmitBoundedWarning } from './bounded-warning-dedupe'
 import {
   getSshProviderAuthority,
@@ -138,7 +138,7 @@ import {
 import { createSenderScopedRequestCancellations } from './sender-scoped-request-cancellation'
 
 type CreateWorktreeArgsWithSystemProvenance = CreateWorktreeArgs & {
-  automationProvenance?: AutomationWorkspaceProvenance
+  automationProvenance?: SystemRunWorkspaceProvenance
   cliProvenance?: CliWorkspaceProvenance
 }
 
@@ -2022,7 +2022,7 @@ export function registerWorktreeHandlers(
         const sourceParse = workspaceSourceSchema.safeParse(args.telemetrySource)
         const source: WorkspaceSource = sourceParse.success ? sourceParse.data : 'unknown'
 
-        const automationProvenance = resolveAutomationWorkspaceProvenance({
+        const automationProvenance = resolveSystemRunWorkspaceProvenance({
           authority: runtime,
           repoSelector: args.repoId,
           repo,

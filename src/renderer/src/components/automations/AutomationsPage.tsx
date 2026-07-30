@@ -91,12 +91,12 @@ import {
   getAutomationRunViewState
 } from './automation-run-view-state'
 import {
-  automationRunMatchesPaneKey,
-  buildAutomationRunOpenLayout,
-  canOpenAutomationRunOpenTarget,
-  getAutomationRunOpenTabId,
-  resolveAutomationRunOpenTarget
-} from './automation-run-open-target'
+  buildRunPaneOpenLayout,
+  canOpenRunPaneTarget,
+  getRunPaneOpenTabId,
+  resolveRunPaneOpenTarget,
+  runMatchesPaneKey
+} from '@/lib/run-pane-open-target'
 import { getAutomationRunWorkspaceDisplay } from './automation-run-workspace-display'
 import CommentMarkdown from '@/components/sidebar/CommentMarkdown'
 import { AutomationDetail } from './AutomationDetail'
@@ -747,13 +747,13 @@ export default function AutomationsPage(): React.JSX.Element {
       })
     : null
   const selectedAutomationRunPageOpenTabId = selectedAutomationRunPage
-    ? getAutomationRunOpenTabId(selectedAutomationRunPage)
+    ? getRunPaneOpenTabId(selectedAutomationRunPage)
     : null
   const selectedAutomationRunPageViewState = selectedAutomationRunPage
     ? getAutomationRunViewState({
         run: selectedAutomationRunPage,
         workspaceExists: Boolean(selectedAutomationRunPageWorktree),
-        terminalTargetExists: canOpenAutomationRunOpenTarget({
+        terminalTargetExists: canOpenRunPaneTarget({
           run: selectedAutomationRunPage,
           terminalTabExists: selectedAutomationRunPageOpenTabId
             ? activeTerminalTabIds.has(selectedAutomationRunPageOpenTabId)
@@ -1138,7 +1138,7 @@ export default function AutomationsPage(): React.JSX.Element {
       }
       const liveDone = Object.entries(agentStatusByPaneKey).some(
         ([paneKey, entry]) =>
-          automationRunMatchesPaneKey(run, paneKey) &&
+          runMatchesPaneKey(run, paneKey) &&
           entry.state === 'done' &&
           entry.updatedAt >= dispatchedAt
       )
@@ -1147,7 +1147,7 @@ export default function AutomationsPage(): React.JSX.Element {
       }
       return Object.entries(retainedAgentsByPaneKey).some(
         ([paneKey, retained]) =>
-          automationRunMatchesPaneKey(run, paneKey) &&
+          runMatchesPaneKey(run, paneKey) &&
           retained.entry.state === 'done' &&
           retained.entry.updatedAt >= dispatchedAt
       )
@@ -2041,11 +2041,11 @@ export default function AutomationsPage(): React.JSX.Element {
   const openRunWorkspace = (run: AutomationRun): void => {
     const runWorktree = run.workspaceId ? (worktreeMap.get(run.workspaceId) ?? null) : null
     const store = useAppStore.getState()
-    const openTabId = getAutomationRunOpenTabId(run)
+    const openTabId = getRunPaneOpenTabId(run)
     const terminalTabExists = openTabId ? Boolean(store.getTab(openTabId)) : false
     const currentLayout = openTabId ? store.terminalLayoutsByTabId[openTabId] : null
     const livePtyIds = openTabId ? (store.ptyIdsByTabId[openTabId] ?? []) : []
-    const terminalTarget = resolveAutomationRunOpenTarget({
+    const terminalTarget = resolveRunPaneOpenTarget({
       run,
       terminalTabExists,
       currentLayout,
@@ -2067,7 +2067,7 @@ export default function AutomationsPage(): React.JSX.Element {
     if (terminalTarget && currentLayout) {
       store.setTabLayout(
         terminalTarget.tabId,
-        buildAutomationRunOpenLayout({
+        buildRunPaneOpenLayout({
           target: terminalTarget,
           currentLayout
         })

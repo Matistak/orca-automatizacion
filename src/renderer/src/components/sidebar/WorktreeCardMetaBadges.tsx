@@ -1,5 +1,5 @@
 import React from 'react'
-import { CalendarClock, CircleDot, SquareTerminal, StickyNote } from 'lucide-react'
+import { CalendarClock, CircleDot, SquareTerminal, StickyNote, Workflow } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { LinearIcon } from '@/components/icons/LinearIcon'
 import { MetaIconBadge } from './WorktreeCardMetadataControls'
@@ -69,7 +69,7 @@ export const WorktreeCardMetaBadges = React.forwardRef<
           <StickyNote className="text-muted-foreground" />
         </MetaIconBadge>
       )}
-      {automationProvenance && (
+      {automationProvenance?.kind === 'created-by-automation' && (
         <MetaIconBadge
           label={translate(
             'auto.components.sidebar.WorktreeCardMeta.automationCreated',
@@ -77,6 +77,16 @@ export const WorktreeCardMetaBadges = React.forwardRef<
           )}
         >
           <CalendarClock className="text-muted-foreground" />
+        </MetaIconBadge>
+      )}
+      {automationProvenance?.kind === 'created-by-flow' && (
+        <MetaIconBadge
+          label={translate(
+            'auto.components.sidebar.WorktreeCardMeta.flowCreated',
+            'Created by flow'
+          )}
+        >
+          <Workflow className="text-muted-foreground" />
         </MetaIconBadge>
       )}
       {cliProvenance && (

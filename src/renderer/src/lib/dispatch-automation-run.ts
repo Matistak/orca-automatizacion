@@ -5,7 +5,7 @@ import type {
   AutomationPrecheckResult,
   AutomationRun
 } from '../../../shared/automations-types'
-import type { AutomationWorkspaceProvenanceRequest } from '../../../shared/types'
+import type { SystemRunWorkspaceProvenanceRequest } from '../../../shared/types'
 import { runAutomationAgentSession } from '@/lib/automation-run-agent-session'
 import { prepareAutomationRunWorkspace } from '@/lib/automation-run-workspace-preparation'
 
@@ -17,10 +17,11 @@ export type AutomationRunDispatchOptions = {
   runPrecheck?: () => Promise<AutomationPrecheckResult | null>
   /** Prior runs used to find a reusable agent session. */
   listRuns?: () => Promise<AutomationRun[]>
-  /** Only stored automations can prove workspace provenance; flows pass none. */
+  /** Proves the workspace this run creates: automations prove against the stored
+   *  Automation, flow nodes against their live flow run. */
   buildProvenanceRequest?: (
     createRequestId: string
-  ) => AutomationWorkspaceProvenanceRequest | undefined
+  ) => SystemRunWorkspaceProvenanceRequest | undefined
 }
 
 /**

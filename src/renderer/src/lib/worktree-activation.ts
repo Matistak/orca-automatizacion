@@ -52,7 +52,10 @@ import {
 import { toast } from 'sonner'
 import { initialAgentTabViewModeProps } from './native-chat-initial-view-mode'
 import { getConnectionId } from '@/lib/connection-context'
-import { isDetachedHeadWorkspace } from '@/components/sidebar/visible-worktrees'
+import {
+  isAutomationGeneratedWorkspace,
+  isDetachedHeadWorkspace
+} from '@/components/sidebar/visible-worktrees'
 import { isNativeChatTranscriptLocalReadable } from '@/lib/native-chat-transcript-readability'
 import { seedNativeChatAppliedSessionOptions } from '@/components/native-chat/native-chat-session-option-cache'
 import type { SessionOptionValue } from '../../../shared/native-chat-session-options'
@@ -296,10 +299,7 @@ export function activateAndRevealWorktree(
   if (state.filterRepoIds.length > 0 && !state.filterRepoIds.includes(wt.repoId)) {
     state.setFilterRepoIds([])
   }
-  if (
-    state.hideAutomationGeneratedWorkspaces &&
-    wt.automationProvenance?.kind === 'created-by-automation'
-  ) {
+  if (state.hideAutomationGeneratedWorkspaces && isAutomationGeneratedWorkspace(wt)) {
     state.setHideAutomationGeneratedWorkspaces(false)
   }
   if (state.hideCliCreatedWorkspaces && wt.cliProvenance?.kind === 'created-by-cli') {

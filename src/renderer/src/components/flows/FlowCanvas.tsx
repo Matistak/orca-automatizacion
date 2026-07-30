@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 import {
   Background,
   BackgroundVariant,
@@ -6,6 +6,7 @@ import {
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
+  useNodesState,
   useReactFlow,
   type Connection,
   type EdgeChange,
@@ -55,7 +56,8 @@ function FlowCanvasInner({
 }: FlowCanvasProps): React.JSX.Element {
   const { screenToFlowPosition } = useReactFlow()
 
-  const rfNodes = useMemo<RFNode<FlowNodeCardData>[]>(
+  // Desired node list derived from the flow (source of truth for structure/data).
+  const desiredNodes = useMemo<RFNode<FlowNodeCardData>[]>(
     () =>
       flow.nodes.map((node) => ({
         id: node.id,
@@ -66,6 +68,31 @@ function FlowCanvasInner({
       })),
     [flow.nodes, invalidNodeIds, selectedNodeId]
   )
+
+  // React Flow owns node state so drags stay smooth; positions persist on drag stop.
+  const [rfNodes, setRfNodes, onNodesChange] = useNodesState<RFNode<FlowNodeCardData>>(desiredNodes)
+  // Ids currently being dragged — their live position must survive external re-syncs.
+  const draggingRef = useRef<Set<string>>(new Set())
+
+  // Reconcile external changes while keeping React Flow's internal fields (measured
+  // dimensions, etc.) and never snapping an in-flight drag back to a stale position.
+  useEffect(() => {
+    setRfNodes((prev) => {
+      const prevById = new Map(prev.map((node) => [node.id, node]))
+      return desiredNodes.map((node) => {
+        const existing = prevById.get(node.id)
+        if (!existing) {
+          return node
+        }
+        return {
+          ...existing,
+          position: draggingRef.current.has(node.id) ? existing.position : node.position,
+          selected: node.selected,
+          data: node.data
+        }
+      })
+    })
+  }, [desiredNodes, setRfNodes])
 
   const rfEdges = useMemo<RFEdge[]>(
     () =>
@@ -81,16 +108,26 @@ function FlowCanvasInner({
   )
 
   const handleNodesChange = useCallback(
-    (changes: NodeChange[]) => {
+    (changes: NodeChange<RFNode<FlowNodeCardData>>[]) => {
+      // Apply drag/selection changes to the canvas immediately for smooth movement.
+      onNodesChange(changes)
       for (const change of changes) {
-        if (change.type === 'position' && change.position) {
-          onNodePositionChange(change.id, change.position)
+        if (change.type === 'position' && change.dragging) {
+          draggingRef.current.add(change.id)
         } else if (change.type === 'remove') {
           onDeleteNode(change.id)
         }
       }
     },
-    [onDeleteNode, onNodePositionChange]
+    [onDeleteNode, onNodesChange]
+  )
+
+  const handleNodeDragStop = useCallback(
+    (_: unknown, node: RFNode) => {
+      draggingRef.current.delete(node.id)
+      onNodePositionChange(node.id, node.position)
+    },
+    [onNodePositionChange]
   )
 
   const handleEdgesChange = useCallback(
@@ -139,6 +176,7 @@ function FlowCanvasInner({
         edges={rfEdges}
         nodeTypes={nodeTypes}
         onNodesChange={handleNodesChange}
+        onNodeDragStop={handleNodeDragStop}
         onEdgesChange={handleEdgesChange}
         onConnect={handleConnect}
         onNodeClick={(_, node) => onSelectNode(node.id)}

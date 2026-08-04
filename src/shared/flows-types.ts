@@ -27,7 +27,14 @@ export type FlowConditionExpression =
 
 /** Discriminated by kind; each variant mirrors an existing automation payload. */
 export type FlowNodeConfig =
-  | { kind: 'trigger-schedule'; rrule: string; dtstart: number; timezone: string }
+  | {
+      kind: 'trigger-schedule'
+      rrule: string
+      dtstart: number
+      timezone: string
+      /** How late an occurrence may still fire; past it the run is skipped_missed. */
+      missedRunGraceMinutes?: number
+    }
   | { kind: 'trigger-manual' }
   | {
       kind: 'agent-prompt'
@@ -109,7 +116,14 @@ export type FlowUpdateInput = Partial<
 
 // ─── Runs ───────────────────────────────────────────────────────────
 
-export type FlowRunStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped'
+export type FlowRunStatus =
+  | 'pending'
+  | 'running'
+  | 'completed'
+  | 'failed'
+  | 'skipped'
+  /** Scheduled occurrence Orca was not running for, past its grace window. */
+  | 'skipped_missed'
 
 export type FlowRunTrigger = 'scheduled' | 'manual'
 
@@ -140,10 +154,14 @@ export type FlowRun = {
   flowSnapshot: Flow
   status: FlowRunStatus
   trigger: FlowRunTrigger
+  /** The schedule occurrence this run belongs to; the scheduler's dedupe key. */
+  scheduledFor?: number
   nodeRuns: FlowNodeRun[]
   startedAt: number
   completedAt: number | null
   runNumber?: number
+  /** Why a scheduled run never executed (missed window, unavailable target). */
+  error?: string | null
 }
 
 // ─── Dispatch bridge (main ⇄ renderer) ──────────────────────────────
@@ -187,5 +205,10 @@ export type FlowRunUpdatedEvent = {
 
 /** Statuses a run can never leave; only these are safe to evict from history. */
 export function isFinalFlowRunStatus(status: FlowRunStatus): boolean {
-  return status === 'completed' || status === 'failed' || status === 'skipped'
+  return (
+    status === 'completed' ||
+    status === 'failed' ||
+    status === 'skipped' ||
+    status === 'skipped_missed'
+  )
 }

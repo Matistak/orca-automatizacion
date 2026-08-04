@@ -30,6 +30,8 @@ export type FlowRepository = {
   updateRunStatus(runId: string, status: FlowRunStatus, completedAt: number | null): FlowRun
   listRunsByFlow(flowId: string, limit?: number): FlowRun[]
   getRun(runId: string): FlowRun | undefined
+  /** Most recent scheduled run — the scheduler's "did this occurrence already fire?" check. */
+  findLatestScheduledRun(flowId: string): FlowRun | undefined
   /** Retention: keep the most recent `keep` runs for a flow, evict the rest. */
   pruneRuns(flowId: string, keep: number): void
 }

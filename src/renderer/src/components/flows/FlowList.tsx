@@ -3,6 +3,7 @@ import { Workflow } from 'lucide-react'
 import type { FlowSummary } from '../../../../shared/flows-types'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
+import { formatFlowRunTime } from './flow-run-presentation'
 
 type FlowListProps = {
   flows: FlowSummary[]
@@ -52,6 +53,12 @@ export function FlowList({ flows, selectedFlowId, onSelect }: FlowListProps): Re
                   ? translate('auto.components.flows.FlowList.9927e9a59e', 'node')
                   : translate('auto.components.flows.FlowList.89c8ee72ae', 'nodes')}
               </span>
+              {flow.nextRunAt !== undefined ? (
+                <span className="block text-[11px] text-muted-foreground">
+                  {translate('auto.components.flows.FlowList.3ea7d5c920', 'Next')}{' '}
+                  {formatFlowRunTime(flow.nextRunAt)}
+                </span>
+              ) : null}
             </span>
           </button>
         )

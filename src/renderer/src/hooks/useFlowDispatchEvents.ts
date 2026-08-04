@@ -10,6 +10,11 @@ import { translate } from '@/i18n/i18n'
  * blocked on the node until a final status arrives.
  */
 export function useFlowDispatchEvents(): void {
+  useEffect(() => {
+    // Why: the scheduler holds back agent nodes until a window can answer.
+    void window.api.flows.rendererReady()
+  }, [])
+
   useEffect(
     () =>
       window.api.flows.onNodeDispatchRequested(async (request: FlowNodeDispatchRequest) => {

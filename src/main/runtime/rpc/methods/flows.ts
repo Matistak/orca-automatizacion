@@ -26,7 +26,8 @@ const NodeConfig = z.discriminatedUnion('kind', [
     kind: z.literal('trigger-schedule'),
     rrule: requiredString('Missing trigger'),
     dtstart: requiredNumber('Missing trigger start time'),
-    timezone: requiredString('Missing timezone')
+    timezone: requiredString('Missing timezone'),
+    missedRunGraceMinutes: OptionalPositiveInt
   }),
   z.object({ kind: z.literal('trigger-manual') }),
   z.object({

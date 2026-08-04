@@ -112,6 +112,18 @@ function RunNodeList({
   onOpenNodeWorkspace: (nodeRun: FlowNodeRun) => void
 }): React.JSX.Element {
   const snapshot: Flow = run.flowSnapshot
+  // A run the scheduler never executed has no node results — only a reason.
+  if (run.nodeRuns.length === 0) {
+    return (
+      <p className="p-2 text-xs text-muted-foreground">
+        {run.error ??
+          translate(
+            'auto.components.flows.FlowRunHistory.8f3d1a6b25',
+            'This run did not execute any nodes.'
+          )}
+      </p>
+    )
+  }
   return (
     <ul className="space-y-1.5">
       {run.nodeRuns.map((nodeRun) => {

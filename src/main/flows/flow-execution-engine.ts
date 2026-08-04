@@ -92,7 +92,11 @@ export class FlowExecutionEngine {
     private readonly dispatcher: FlowNodeDispatcher
   ) {}
 
-  async run(flow: Flow, trigger: FlowRunTrigger): Promise<FlowExecutionResult> {
+  async run(
+    flow: Flow,
+    trigger: FlowRunTrigger,
+    opts: { scheduledFor?: number } = {}
+  ): Promise<FlowExecutionResult> {
     const validation = validateFlowGraph(flow)
     if (!validation.ok) {
       throw new Error(
@@ -109,6 +113,7 @@ export class FlowExecutionEngine {
       flowSnapshot: snapshot,
       status: 'running',
       trigger,
+      scheduledFor: opts.scheduledFor,
       nodeRuns: [],
       startedAt,
       completedAt: null

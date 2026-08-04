@@ -20,7 +20,7 @@
 | 4 — Editor visual de nodos (UI) | ✅ Hecho | `@xyflow/react` instalado. Vista `flows` cableada, canvas + paleta + inspector + autosave + validación en vivo. `flow-graph` movido a `shared/`. typecheck (node/cli/web) 0 · lint OK. |
 | 5 — Ejecución desde UI + observabilidad | ✅ Hecho | `flows:runNow` + `FlowRunService`, dispatcher shell (main) y agent (renderer, reusando el coordinador de automatizaciones), overlay de estado en vivo, historial y detalle de run. 45 tests flows · typecheck 0 · lint OK. |
 | 5.5 — Cierre de observabilidad y provenance | ✅ Hecho | `kind: 'created-by-flow'` validado contra el `FlowRun`, "Open" enfoca el panel exacto, tokens/coste recolectados. 62 tests flows · typecheck 0 · lint OK. |
-| 6 — Integración con el scheduler | ⬜ Pendiente | |
+| 6 — Integración con el scheduler | ✅ Hecho | `FlowSchedulerService` (tick 60s), ocurrencia derivada del nodo (sin `nextRunAt` persistido), gracia por flujo, dispatcher headless para serve. 103 tests flows+schedule · typecheck 0 · lint + 8 gates OK. |
 | 7 — Preparación SQLite + pulido | ⬜ Pendiente | |
 
 > Convención: cada etapa se marca aquí y sus checkboxes se actualizan al terminar, con archivos
@@ -513,15 +513,61 @@ renderer tocadas)
 
 **Objetivo:** flujos programados (no solo manuales).
 
-- [ ] `FlowSchedulerService` o extender `AutomationService`: en cada tick, evaluar flujos
-      `enabled` con nodo `trigger-schedule` cuyo `nextRunAt <= now`.
-- [ ] Calcular `nextRunAt` reusando `nextAutomationOccurrenceAfter` (`automation-schedules.ts`).
-- [ ] Ventana de gracia por runs perdidos (patrón `missedRunGraceMinutes` → `skipped_missed`).
-- [ ] **Modo headless/serve:** ejecutar sin renderer con `headlessDispatcher`
-      (patrón `headless-dispatch.ts`, `allowRemoteHostScheduling`).
-- [ ] Tests de scheduling (due, missed, concurrencia del tick, aislamiento por host).
+- [x] `FlowSchedulerService` nuevo (no se extendió `AutomationService`: el estado de schedule vive
+      dentro de un nodo, no en la fila del flujo). Tick de 60s, `evaluateDueFlows(now)` público para
+      tests y para el pase de catch-up de arranque.
+- [x] **Sin `nextRunAt` persistido.** `shared/flow-schedule.ts` deriva la ocurrencia con
+      `latestAutomationOccurrenceAtOrBefore` / `nextAutomationOccurrenceAfter` y el marcador de
+      "ya disparada" es el `scheduledFor` del `FlowRun` programado más reciente
+      (`findLatestScheduledRun`, nueva query del repositorio).
+      _Por qué: el editor reescribe el nodo de trigger en cada autosave; un `nextRunAt` guardado
+      quedaría desincronizado en cuanto el usuario cambia la hora._
+- [x] Ventana de gracia por flujo: `missedRunGraceMinutes` opcional en el config de
+      `trigger-schedule` (default 720, igual que automatizaciones) → `FlowRunStatus`
+      `'skipped_missed'` nuevo. El run perdido se persiste y **doble como marcador**, así el tick
+      siguiente no reintenta la misma ocurrencia.
+- [x] Elegibilidad: `isFlowScheduleEligible` exige `enabled` + nodo de schedule + grafo válido
+      (`validateFlowGraph`), para que un flujo a medio editar no acumule un run fallido por tick.
+- [x] **Aislamiento por host:** `flow-scheduler-host-eligibility.ts` mira los repos que los nodos
+      declaran (projectId / repoId del workspaceId) y rechaza hosts `runtime:` salvo en serve
+      (`allowRemoteHostScheduling`), igual que `run-target-resolution.ts` para automatizaciones.
+      El run se registra como `skipped` con el motivo.
+- [x] **Modo headless/serve:** `createHeadlessFlowNodeDispatcher` corre nodos `agent-prompt` sin
+      renderer (crear/reusar workspace → lanzar agente → `waitForTerminal('tui-idle')` → tail como
+      output), reusando `createHeadlessAutomationOutputSnapshotBuffer` y estampando la provenance
+      `created-by-flow` de la Etapa 5.5. Los shell nodes ya corrían en main.
+- [x] Gate de readiness del renderer: nuevo `flows:rendererReady` (patrón
+      `automations:rendererReady`). Una ventana adjunta pero sin el listener montado se trata como
+      ausente → cae al dispatcher headless en vez de colgarse esperando una respuesta.
+- [x] Propiedad de los servicios movida a `flows/flow-services.ts` (singleton `initFlowServices`),
+      porque serve arma el scheduler **sin** registrar handlers IPC de renderer.
+- [x] UI: próxima ejecución en `FlowList`, selector de gracia en el inspector (reusando
+      `AutomationMissedRunGraceField`), etiqueta "Missed" y motivo del run en el detalle de historial.
+- [x] **Tests** (41 nuevos): `flow-scheduler-service` (due, no-doble-disparo, siguiente ocurrencia,
+      gracia default y por flujo, disabled, manual-only, grafo inválido, flujo ya corriendo,
+      no-solape de ticks, host remoto), `flow-schedule` (7), `headless-flow-node-dispatcher` (9),
+      `flow-run-service` (7: fallback headless, gate de readiness, concurrencia, `scheduledFor`).
 
-**Entregable:** un flujo con `trigger-schedule` corre solo a su hora.
+**Entregable:** un flujo con `trigger-schedule` corre solo a su hora. ✅ **HECHO**
+(typecheck node/cli/web 0 · lint + los 8 gates OK · 103 tests flows/schedule · 515 tests de
+main y 2163 del renderer verdes)
+
+**Archivos tocados:**
+- Shared: `flow-schedule.ts` (nuevo, + test), `flows-types.ts` (`missedRunGraceMinutes`,
+  `skipped_missed`, `FlowRun.scheduledFor`/`error`)
+- Main: `flows/{flow-scheduler-service,flow-scheduler-host-eligibility,headless-flow-node-dispatcher,
+  flow-services}.ts` (+ tests), `flow-run-service.ts` (+ test: `runScheduled`,
+  `recordUnexecutedRun`, gate de readiness, fallback headless), `flow-execution-engine.ts`
+  (`scheduledFor`), `flow-repository.ts` + `json-flow-repository.ts`
+  (`findLatestScheduledRun`, `nextRunAt` en summaries), `ipc/flows.ts`, `index.ts`,
+  `runtime/rpc/methods/flows.ts`
+- Preload: `index.ts`, `api-types.ts` (`flows.rendererReady`)
+- Renderer: `hooks/useFlowDispatchEvents.ts`, `components/flows/{FlowList,FlowScheduleField,
+  NodeInspector,FlowRunHistory}.tsx`, `flow-run-presentation.ts`, locales (3 claves × 5 idiomas)
+
+**Limitación consciente:** el scheduler evalúa el cron en la hora local del host que corre Orca; el
+campo `timezone` del nodo se guarda pero todavía no se aplica (misma limitación que
+`automation-schedules.ts`). Un flujo diario dispara a su hora local, no a la del `timezone` elegido.
 
 ---
 

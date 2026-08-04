@@ -60,6 +60,8 @@ export function getFlowRunStatusLabel(status: FlowRunStatus): string {
       return translate('auto.components.flows.flow.run.presentation.9d1e7b5c30', 'Failed')
     case 'skipped':
       return translate('auto.components.flows.flow.run.presentation.71c3f9a284', 'Skipped')
+    case 'skipped_missed':
+      return translate('auto.components.flows.flow.run.presentation.4c8b2e6f17', 'Missed')
   }
 }
 

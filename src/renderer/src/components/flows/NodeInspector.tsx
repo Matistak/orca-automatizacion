@@ -101,7 +101,11 @@ function NodeConfigFields({
       return (
         <FlowScheduleField
           rrule={config.rrule}
+          missedRunGraceMinutes={config.missedRunGraceMinutes}
           onRruleChange={(rrule) => onConfigChange({ ...config, rrule })}
+          onMissedRunGraceMinutesChange={(missedRunGraceMinutes) =>
+            onConfigChange({ ...config, missedRunGraceMinutes })
+          }
         />
       )
     case 'agent-prompt':

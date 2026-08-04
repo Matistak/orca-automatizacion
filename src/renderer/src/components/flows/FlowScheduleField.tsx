@@ -3,7 +3,9 @@ import {
   buildAutomationRrule,
   tryParseAutomationRrule
 } from '../../../../shared/automation-schedules'
+import { DEFAULT_FLOW_MISSED_RUN_GRACE_MINUTES } from '../../../../shared/flow-schedule'
 import { AutomationSchedulePicker } from '@/components/automations/AutomationSchedulePicker'
+import { AutomationMissedRunGraceField } from '@/components/automations/AutomationMissedRunGraceField'
 import { Field } from '@/components/automations/automation-page-parts'
 import type { AutomationDraft } from '@/components/automations/AutomationEditorDialog'
 import { translate } from '@/i18n/i18n'
@@ -14,29 +16,53 @@ import { translate } from '@/i18n/i18n'
  */
 export function FlowScheduleField({
   rrule,
-  onRruleChange
+  missedRunGraceMinutes,
+  onRruleChange,
+  onMissedRunGraceMinutesChange
 }: {
   rrule: string
+  missedRunGraceMinutes: number | undefined
   onRruleChange: (rrule: string) => void
+  onMissedRunGraceMinutesChange: (minutes: number) => void
 }): React.JSX.Element {
-  const [draft, setDraft] = useState<AutomationDraft>(() => seedDraftFromRrule(rrule))
+  const [draft, setDraft] = useState<AutomationDraft>(() => ({
+    ...seedDraftFromRrule(rrule),
+    missedRunGraceMinutes: String(missedRunGraceMinutes ?? DEFAULT_FLOW_MISSED_RUN_GRACE_MINUTES)
+  }))
 
   const label = useMemo(() => rrule || 'No schedule set', [rrule])
 
   return (
-    <Field label={translate('auto.components.flows.FlowScheduleField.2465676bae', 'Schedule')}>
-      <AutomationSchedulePicker
+    <>
+      <Field label={translate('auto.components.flows.FlowScheduleField.2465676bae', 'Schedule')}>
+        <AutomationSchedulePicker
+          draft={draft}
+          onDraftChange={(updater) =>
+            setDraft((current) => {
+              const next = updater(current)
+              onRruleChange(rruleFromDraft(next))
+              return next
+            })
+          }
+        />
+        <p className="mt-1 truncate text-[11px] text-muted-foreground">{label}</p>
+      </Field>
+      <AutomationMissedRunGraceField
         draft={draft}
+        disabled={false}
+        pickerTriggerClassName="h-8 text-xs"
         onDraftChange={(updater) =>
           setDraft((current) => {
             const next = updater(current)
-            onRruleChange(rruleFromDraft(next))
+            const parsed = Number(next.missedRunGraceMinutes)
+            onMissedRunGraceMinutesChange(
+              Number.isFinite(parsed) ? parsed : DEFAULT_FLOW_MISSED_RUN_GRACE_MINUTES
+            )
             return next
           })
         }
       />
-      <p className="mt-1 truncate text-[11px] text-muted-foreground">{label}</p>
-    </Field>
+    </>
   )
 }
 

@@ -39,7 +39,10 @@ import {
 import { closeAllWatchers } from './ipc/filesystem-watcher'
 import { disposeWorktreeBaseDirectoryWatchers } from './ipc/worktree-base-directory-watcher'
 import { registerCoreHandlers } from './ipc/register-core-handlers'
-import { setFlowRunWebContents } from './ipc/flows'
+import { setFlowRunWebContents, startFlowScheduler } from './ipc/flows'
+import { initFlowServices } from './flows/flow-services'
+import { createHeadlessFlowNodeDispatcher } from './flows/headless-flow-node-dispatcher'
+import { JsonFlowRepository } from './flows/json-flow-repository'
 import { initObservability, shutdownObservability } from './observability'
 import { registerMobileHandlers } from './ipc/mobile'
 import { initTelemetry, shutdownTelemetry, trackAppOpenedOnce, track } from './telemetry/client'
@@ -1251,6 +1254,7 @@ function openMainWindow(): BrowserWindow {
   automations.setWebContents(window.webContents)
   automations.start()
   setFlowRunWebContents(window.webContents)
+  startFlowScheduler()
   attachMainWindowServices(
     window,
     store,
@@ -2347,6 +2351,20 @@ void app.whenReady().then(async () => {
         }
       : undefined
   })
+  // Why: initialized here (not in registerFlowHandlers) because serve mode arms
+  // the flow scheduler without ever registering renderer IPC handlers.
+  initFlowServices(store, {
+    claudeUsage,
+    codexUsage,
+    allowRemoteHostScheduling: isServeMode,
+    headlessDispatcher: isServeMode
+      ? createHeadlessFlowNodeDispatcher({
+          runtime: runtimeService,
+          repository: new JsonFlowRepository(store),
+          getRepo: (repoId) => store!.getRepo(repoId)
+        })
+      : null
+  })
   runtimeService.setAutomationService(automations)
   runtimeService.setAccountServices({ claudeAccounts, codexAccounts, rateLimits })
   runtimeService.setCommitMessageAgentEnvironmentResolvers({
@@ -2745,6 +2763,7 @@ void app.whenReady().then(async () => {
     }
     // Why: headless serve never opens a renderer, so arm scheduled automation dispatch here.
     automations.start()
+    startFlowScheduler()
     await printServeReady(serveOptions)
     return
   }

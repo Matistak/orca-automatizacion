@@ -14,6 +14,7 @@ import {
   nextFlowRunNumber,
   pruneFlowRuns
 } from '../../shared/flow-run-retention'
+import { isFlowScheduleEligible, nextFlowOccurrenceAfter } from '../../shared/flow-schedule'
 import type { FlowRepository } from './flow-repository'
 import type { FlowStoreBackend } from './flow-store-backend'
 
@@ -26,6 +27,7 @@ export class JsonFlowRepository implements FlowRepository {
 
   listFlowSummaries(): FlowSummary[] {
     const runs = this.backend.readFlowRuns()
+    const now = Date.now()
     return this.backend
       .readFlows()
       .map((flow) => {
@@ -41,7 +43,10 @@ export class JsonFlowRepository implements FlowRepository {
           enabled: flow.enabled,
           nodeCount: flow.nodes.length,
           updatedAt: flow.updatedAt,
-          lastRunAt
+          lastRunAt,
+          nextRunAt: isFlowScheduleEligible(flow)
+            ? (nextFlowOccurrenceAfter(flow, now) ?? undefined)
+            : undefined
         }
       })
       .sort((left, right) => left.name.localeCompare(right.name))
@@ -141,6 +146,20 @@ export class JsonFlowRepository implements FlowRepository {
 
   getRun(runId: string): FlowRun | undefined {
     return this.backend.readFlowRuns().find((run) => run.id === runId)
+  }
+
+  findLatestScheduledRun(flowId: string): FlowRun | undefined {
+    return this.backend
+      .readFlowRuns()
+      .filter((run) => run.flowId === flowId && run.trigger === 'scheduled')
+      .reduce<FlowRun | undefined>(
+        (latest, run) =>
+          latest === undefined ||
+          (run.scheduledFor ?? run.startedAt) > (latest.scheduledFor ?? latest.startedAt)
+            ? run
+            : latest,
+        undefined
+      )
   }
 
   pruneRuns(flowId: string, keep: number = MAX_FLOW_RUNS_PER_FLOW): void {

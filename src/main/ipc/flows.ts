@@ -2,8 +2,7 @@ import { ipcMain, type WebContents } from 'electron'
 import type { ClaudeUsageStore } from '../claude-usage/store'
 import type { CodexUsageStore } from '../codex-usage/store'
 import type { Store } from '../persistence'
-import { JsonFlowRepository } from '../flows/json-flow-repository'
-import { FlowRunService } from '../flows/flow-run-service'
+import { getFlowServices, initFlowServices } from '../flows/flow-services'
 import type {
   Flow,
   FlowCreateInput,
@@ -18,22 +17,34 @@ import type {
  * the RPC methods in runtime/rpc/methods/flows.ts instead; both talk to the
  * same JsonFlowRepository so behaviour stays identical across transports.
  */
-let flowRuns: FlowRunService | null = null
 
 /**
  * The window that executes agent nodes changes over the app lifecycle (close /
  * reopen on macOS), so index.ts re-points the service instead of rebuilding it.
  */
 export function setFlowRunWebContents(webContents: WebContents | null): void {
-  flowRuns?.setWebContents(webContents)
+  const services = getFlowServices()
+  services?.runService.setWebContents(webContents)
+  if (!webContents) {
+    services?.scheduler.clearRendererReady()
+  }
+}
+
+/** Arms scheduled flows; safe to call more than once. */
+export function startFlowScheduler(): void {
+  getFlowServices()?.scheduler.start()
+}
+
+export function stopFlowScheduler(): void {
+  getFlowServices()?.scheduler.stop()
 }
 
 export function registerFlowHandlers(
   store: Store,
   usage: { claudeUsage?: ClaudeUsageStore; codexUsage?: CodexUsageStore } = {}
 ): void {
-  const repository = new JsonFlowRepository(store)
-  flowRuns = new FlowRunService(store, repository, usage)
+  // Serve mode already initialized these; a desktop launch initializes here.
+  const { repository, runService, scheduler } = initFlowServices(store, usage)
 
   ipcMain.handle('flows:list', (): FlowSummary[] => repository.listFlowSummaries())
   ipcMain.handle('flows:get', (_event, args: { id: string }): Flow | undefined =>
@@ -57,13 +68,18 @@ export function registerFlowHandlers(
   ipcMain.handle('flows:getRun', (_event, args: { runId: string }): FlowRun | undefined =>
     repository.getRun(args.runId)
   )
-  ipcMain.handle('flows:runNow', async (_event, args: { flowId: string }): Promise<FlowRun> => {
-    if (!flowRuns) {
-      throw new Error('Flow execution is unavailable in this Orca process.')
-    }
-    return await flowRuns.runNow(args.flowId)
-  })
+  ipcMain.handle(
+    'flows:runNow',
+    async (_event, args: { flowId: string }): Promise<FlowRun> =>
+      await runService.runNow(args.flowId)
+  )
   ipcMain.handle('flows:markNodeDispatchResult', (_event, result: FlowNodeDispatchResult): void => {
-    flowRuns?.reportNodeResult(result)
+    runService.reportNodeResult(result)
+  })
+  // Why: the scheduler must not dispatch an agent node into a window that has
+  // not mounted its listener yet; this also drives the startup catch-up pass.
+  ipcMain.handle('flows:rendererReady', (): void => {
+    runService.setRendererReady()
+    scheduler.setRendererReady()
   })
 }

@@ -3457,6 +3457,8 @@ export type PreloadApi = {
     getRun: (args: { runId: string }) => Promise<FlowRun | undefined>
     runNow: (args: { flowId: string }) => Promise<FlowRun>
     markNodeDispatchResult: (result: FlowNodeDispatchResult) => Promise<void>
+    /** Signals that the node-dispatch listener is mounted and can accept work. */
+    rendererReady: () => Promise<void>
     onNodeDispatchRequested: (callback: (request: FlowNodeDispatchRequest) => void) => () => void
     onRunUpdated: (callback: (event: FlowRunUpdatedEvent) => void) => () => void
   }

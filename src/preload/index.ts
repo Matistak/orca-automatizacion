@@ -4553,6 +4553,7 @@ const api = {
       ipcRenderer.invoke('flows:runNow', args),
     markNodeDispatchResult: (result: FlowNodeDispatchResult): Promise<void> =>
       ipcRenderer.invoke('flows:markNodeDispatchResult', result),
+    rendererReady: (): Promise<void> => ipcRenderer.invoke('flows:rendererReady'),
     onNodeDispatchRequested: (
       callback: (request: FlowNodeDispatchRequest) => void
     ): (() => void) => {

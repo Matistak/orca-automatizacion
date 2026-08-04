@@ -1,4 +1,16 @@
 import type { Flow, FlowNode, FlowNodeKind } from './flows-types'
+import { hasAgentPromptContent } from './flow-agent-prompt-composition'
+
+/**
+ * Single definition of what makes a flow runnable, shared by the editor (live
+ * banner), the engine (refuses to run an invalid graph) and the scheduler (skips
+ * one instead of piling up a failed run per tick).
+ *
+ * Errors block a run: no/multiple triggers, cycles, dangling edges, a condition
+ * missing a branch, or a node config lacking what its dispatch needs. Warnings
+ * (e.g. an unreachable node) are informational — the engine simply never reaches
+ * them and persists them as skipped.
+ */
 
 export type FlowGraphIssue = { code: string; message: string; nodeId?: string }
 
@@ -69,8 +81,12 @@ function validateNodeConfig(node: FlowNode): FlowGraphIssue[] {
   const issues: FlowGraphIssue[] = []
   const config = node.config
   if (config.kind === 'agent-prompt') {
-    if (!config.prompt.trim()) {
-      issues.push({ code: 'missing_prompt', message: 'Agent node has no prompt.', nodeId: node.id })
+    if (!hasAgentPromptContent(config)) {
+      issues.push({
+        code: 'missing_prompt',
+        message: 'Agent node needs a prompt or an attached markdown file.',
+        nodeId: node.id
+      })
     }
     if (config.workspaceMode === 'new_per_run' && !config.projectId) {
       issues.push({

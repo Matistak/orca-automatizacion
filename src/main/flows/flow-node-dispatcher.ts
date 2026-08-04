@@ -3,7 +3,7 @@ import type {
   AutomationRunStatus,
   AutomationRunUsage
 } from '../../shared/automations-types'
-import type { FlowNode } from '../../shared/flows-types'
+import type { FlowNode, FlowNodeDiffStat } from '../../shared/flows-types'
 
 /**
  * Outcome of executing a single node. Mirrors the automation run vocabulary so a
@@ -15,6 +15,7 @@ export type FlowNodeResult = {
   output: AutomationRunOutputSnapshot | null
   usage: AutomationRunUsage | null
   exitCode: number | null
+  diffStat?: FlowNodeDiffStat | null
   /** Workspace the node ran in; downstream shell nodes inherit it. */
   workspaceId: string | null
   workspaceDisplayName: string | null

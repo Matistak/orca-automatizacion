@@ -524,6 +524,7 @@ import type {
   FlowSummary,
   FlowUpdateInput
 } from '../shared/flows-types'
+import type { FlowExportOutcome, FlowImportOutcome } from '../shared/flow-portable-document'
 import type {
   WorkspaceCleanupDismissArgs,
   WorkspaceCleanupLocalProcessArgs,
@@ -3453,6 +3454,12 @@ export type PreloadApi = {
     create: (input: FlowCreateInput) => Promise<Flow>
     update: (args: { id: string; updates: FlowUpdateInput }) => Promise<Flow>
     delete: (args: { id: string }) => Promise<void>
+    /** Writes the flow to a portable JSON file the user picks. */
+    exportFlow: (args: { id: string }) => Promise<FlowExportOutcome>
+    /** Creates a new flow from a picked JSON file; never overwrites an existing one. */
+    importFlow: () => Promise<FlowImportOutcome>
+    /** Multi-select native picker for .md instruction attachments on agent nodes. */
+    pickMarkdownFiles: () => Promise<string[]>
     listRuns: (args: { flowId: string; limit?: number }) => Promise<FlowRun[]>
     getRun: (args: { runId: string }) => Promise<FlowRun | undefined>
     runNow: (args: { flowId: string }) => Promise<FlowRun>

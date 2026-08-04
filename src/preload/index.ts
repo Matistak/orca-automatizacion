@@ -236,6 +236,7 @@ import type {
   FlowSummary,
   FlowUpdateInput
 } from '../shared/flows-types'
+import type { FlowExportOutcome, FlowImportOutcome } from '../shared/flow-portable-document'
 import type { KeybindingActionId, KeybindingFileSnapshot } from '../shared/keybindings'
 import type { AiVaultListArgs, AiVaultSubagentListArgs } from '../shared/ai-vault-types'
 import type { AiVaultPrepareSessionResumeArgs } from '../shared/ai-vault-resume-preparation'
@@ -4545,6 +4546,10 @@ const api = {
     update: (args: { id: string; updates: FlowUpdateInput }): Promise<Flow> =>
       ipcRenderer.invoke('flows:update', args),
     delete: (args: { id: string }): Promise<void> => ipcRenderer.invoke('flows:delete', args),
+    exportFlow: (args: { id: string }): Promise<FlowExportOutcome> =>
+      ipcRenderer.invoke('flows:export', args),
+    importFlow: (): Promise<FlowImportOutcome> => ipcRenderer.invoke('flows:import'),
+    pickMarkdownFiles: (): Promise<string[]> => ipcRenderer.invoke('flows:pickMarkdownFiles'),
     listRuns: (args: { flowId: string; limit?: number }): Promise<FlowRun[]> =>
       ipcRenderer.invoke('flows:listRuns', args),
     getRun: (args: { runId: string }): Promise<FlowRun | undefined> =>

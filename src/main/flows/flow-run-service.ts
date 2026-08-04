@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto'
 import type { WebContents } from 'electron'
 import type {
   Flow,
+  FlowNode,
+  FlowNodeDiffStat,
   FlowNodeDispatchResult,
   FlowNodeRun,
   FlowRun,
@@ -13,7 +15,11 @@ import type { CodexUsageStore } from '../codex-usage/store'
 import type { Store } from '../persistence'
 import { FlowExecutionEngine } from './flow-execution-engine'
 import { createFlowNodeUsageCollector } from './flow-node-usage-collection'
-import type { FlowNodeDispatcher } from './flow-node-dispatcher'
+import {
+  createFlowNodeDiffStatCollector,
+  type FlowNodeDiffStatCollector
+} from './flow-node-diff-stat'
+import type { FlowNodeDispatcher, FlowNodeResult } from './flow-node-dispatcher'
 import type { FlowRepository } from './flow-repository'
 import { RendererFlowNodeDispatcher } from './renderer-flow-node-dispatcher'
 import { dispatchShellFlowNode } from './shell-flow-node-dispatcher'
@@ -63,6 +69,7 @@ export class FlowRunService {
   private readonly repository: FlowRepository
   private readonly rendererDispatcher: RendererFlowNodeDispatcher
   private readonly headlessDispatcher: FlowNodeDispatcher | null
+  private readonly diffStatCollector: FlowNodeDiffStatCollector
   private readonly running = new Set<string>()
   private webContents: WebContents | null = null
   private rendererReady = false
@@ -75,9 +82,14 @@ export class FlowRunService {
       codexUsage?: CodexUsageStore | null
       /** Serve mode: executes agent nodes without a renderer. */
       headlessDispatcher?: FlowNodeDispatcher | null
+      /** Overridden in tests so no real git runs. */
+      diffStatCollector?: FlowNodeDiffStatCollector
     } = {}
   ) {
     this.headlessDispatcher = opts.headlessDispatcher ?? null
+    this.diffStatCollector =
+      opts.diffStatCollector ??
+      createFlowNodeDiffStatCollector((repoId) => this.store.getRepo(repoId))
     this.repository = new BroadcastingFlowRepository(repository, (run) => this.broadcastRun(run))
     this.rendererDispatcher = new RendererFlowNodeDispatcher(
       this.repository,
@@ -175,6 +187,30 @@ export class FlowRunService {
   }
 
   private createDispatcher(): FlowNodeDispatcher {
+    const inner = this.createNodeDispatcher()
+    return {
+      dispatchNode: async (args) => {
+        const result = await inner.dispatchNode(args)
+        return { ...result, diffStat: await this.collectDiffStat(args.node, result) }
+      }
+    }
+  }
+
+  /** What the node left in its workspace; null whenever it is not measurable. */
+  private async collectDiffStat(
+    node: FlowNode,
+    result: FlowNodeResult
+  ): Promise<FlowNodeDiffStat | null> {
+    if (result.status !== 'completed' || !result.workspaceId) {
+      return null
+    }
+    return await this.diffStatCollector({
+      workspaceId: result.workspaceId,
+      baseBranch: node.config.kind === 'agent-prompt' ? node.config.baseBranch : null
+    })
+  }
+
+  private createNodeDispatcher(): FlowNodeDispatcher {
     return {
       dispatchNode: async ({ node, context }) => {
         if (node.config.kind === 'shell-command') {

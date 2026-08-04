@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import type { FlowNodeDispatchRequest } from '../../../shared/flows-types'
 import { dispatchAutomationRun } from '@/lib/dispatch-automation-run'
 import { toFlowNodeAutomation } from '@/lib/flow-agent-node-automation'
+import { resolveAgentNodePrompt } from '@/lib/flow-agent-prompt-resolution'
 import { translate } from '@/i18n/i18n'
 
 /**
@@ -22,7 +23,22 @@ export function useFlowDispatchEvents(): void {
           result: Parameters<typeof window.api.flows.markNodeDispatchResult>[0]
         ): Promise<void> => window.api.flows.markNodeDispatchResult(result)
 
-        const synthesized = toFlowNodeAutomation(request)
+        let resolvedPrompt: string | undefined
+        if (request.node.config.kind === 'agent-prompt') {
+          try {
+            resolvedPrompt = await resolveAgentNodePrompt(request.node.config)
+          } catch (error) {
+            await report({
+              flowRunId: request.flowRunId,
+              nodeId: request.nodeId,
+              status: 'dispatch_failed',
+              error: error instanceof Error ? error.message : String(error)
+            })
+            return
+          }
+        }
+
+        const synthesized = toFlowNodeAutomation(request, resolvedPrompt)
         if (!synthesized) {
           await report({
             flowRunId: request.flowRunId,

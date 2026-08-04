@@ -56,6 +56,7 @@ function nodeRunFrom(nodeId: string, result: FlowNodeResult, startedAt: number):
     workspaceId: result.workspaceId,
     workspaceDisplayName: result.workspaceDisplayName,
     exitCode: result.exitCode,
+    diffStat: result.diffStat ?? null,
     terminalSessionId: result.terminalSessionId,
     terminalPaneKey: result.terminalPaneKey,
     terminalPtyId: result.terminalPtyId,

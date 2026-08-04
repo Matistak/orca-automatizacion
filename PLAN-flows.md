@@ -21,7 +21,7 @@
 | 5 — Ejecución desde UI + observabilidad | ✅ Hecho | `flows:runNow` + `FlowRunService`, dispatcher shell (main) y agent (renderer, reusando el coordinador de automatizaciones), overlay de estado en vivo, historial y detalle de run. 45 tests flows · typecheck 0 · lint OK. |
 | 5.5 — Cierre de observabilidad y provenance | ✅ Hecho | `kind: 'created-by-flow'` validado contra el `FlowRun`, "Open" enfoca el panel exacto, tokens/coste recolectados. 62 tests flows · typecheck 0 · lint OK. |
 | 6 — Integración con el scheduler | ✅ Hecho | `FlowSchedulerService` (tick 60s), ocurrencia derivada del nodo (sin `nextRunAt` persistido), gracia por flujo, dispatcher headless para serve. 103 tests flows+schedule · typecheck 0 · lint + 8 gates OK. |
-| 7 — Preparación SQLite + pulido | ⬜ Pendiente | |
+| 7 — Preparación SQLite + pulido | ✅ Hecho | Suite de contrato paramétrica (Json vs Sqlite, 38 casos × 2 backends), spike `SqliteFlowRepository` sobre `node:sqlite`, import/export de flujos en JSON portable, docs inline del modelo. 149 tests flows/schedule · typecheck 0 · lint + 8 gates OK. |
 
 > Convención: cada etapa se marca aquí y sus checkboxes se actualizan al terminar, con archivos
 > tocados y resultado de verificación (typecheck/tests/lint).
@@ -575,16 +575,56 @@ campo `timezone` del nodo se guarda pero todavía no se aplica (misma limitació
 
 **Objetivo:** validar que la abstracción aguanta y dejar todo listo para migrar cuando haga falta.
 
-- [ ] Escribir un **`SqliteFlowRepository` de prueba (spike)** contra la MISMA interfaz y correr
-      la misma suite de tests del repositorio contra ambas implementaciones (test paramétrico).
-      Esto **valida el diseño** aunque no se adopte todavía.
-- [ ] **Nota sobre `better-sqlite3`:** es dependencia nativa → cuidado con el piso de glibc en
-      Linux (`docs/reference/linux-glibc-compatibility.md`, Ubuntu 20.04 / glibc 2.31). El
-      empaquetado falla si un binario nativo requiere glibc más nuevo. No adoptar hasta tener
-      evidencia de que el JSON no rinde.
-- [ ] Herramienta de import/export de flujos (JSON portable) — útil para compartir y debug.
-- [ ] Documentar el modelo y el motor en comentarios inline (el proyecto prefiere esto sobre
-      docs de arquitectura separados).
+- [x] **Suite de contrato paramétrica** (`flow-repository-contract.test.ts`): 19 casos que corren
+      contra **las dos** implementaciones (`describe.each`) — CRUD, round-trip de nodos/aristas,
+      cascada al borrar, summaries (orden, `lastRunAt`, `nextRunAt`), numeración de runs, snapshot
+      congelado, upsert de node-run, roll-up de estado, `findLatestScheduledRun` por ocurrencia,
+      `error`/`scheduledFor` de runs no ejecutados y retención (nunca evicta un run vivo).
+      `json-flow-repository.test.ts` se **eliminó**: sus casos son ahora el contrato, así una
+      regresión en cualquier backend se ve en el mismo sitio.
+- [x] **Spike `SqliteFlowRepository`** contra la misma interfaz, **no cableado** en la app. Una fila
+      por flujo y por run; `nodes`/`edges`/`nodeRuns`/`flowSnapshot` quedan como columnas JSON
+      (siempre se leen/escriben enteras, partirlas solo costaría joins). `is_final` desnormalizado
+      para que la retención sea **un** DELETE que jamás toca un run vivo.
+      _Resultado del spike: la interfaz aguanta sin cambios — 0 métodos añadidos, 0 firmas tocadas._
+- [x] **`node:sqlite` en vez de `better-sqlite3`** para el spike: viene con Node (engines: 24), así
+      que no añade dependencia nativa ni puede romper el piso de glibc en Linux
+      (`docs/reference/linux-glibc-compatibility.md`). Sigue en pie la regla: no adoptar SQLite en
+      producción hasta tener evidencia de que el store JSON no rinde. Si algún día se adopta un
+      driver nativo, esa evaluación de glibc vuelve a aplicar.
+- [x] **Import/export de flujos** en JSON portable (`shared/flow-portable-document.ts`):
+      envelope `{ kind: 'orca.flow', schemaVersion, exportedAt, flow }`. Viaja el grafo; **no**
+      viajan id, historial ni timestamps → importar **siempre crea** un flujo nuevo, nunca
+      sobreescribe. Se importa con `enabled: false` a propósito (un flujo programado no debe empezar
+      a disparar antes de que el usuario revise sus referencias locales). Las referencias locales
+      (`projectId`/`workspaceId`) se preservan tal cual para no romper el round-trip en la misma
+      máquina; en otra, `validateFlowGraph` ya las reporta en el banner. El parseo **rechaza** en vez
+      de reparar (JSON inválido, documento ajeno, schema más nuevo, nodo/arista ilegible, ids
+      duplicados, arista colgante); solo la posición del canvas, que es cosmética, cae a `{0,0}`.
+- [x] Wiring: `flow-document-file-io.ts` (diálogos e `fs` inyectables → testeable sin Electron),
+      IPC `flows:export`/`flows:import`, `window.api.flows.exportFlow/importFlow`, acciones en el
+      slice y botones Import/Export en el header (`use-flow-document-actions.ts`; el export hace
+      flush del autosave pendiente para que el archivo coincida con la pantalla).
+- [x] **Documentación inline** del modelo y el motor: cabecera-mapa en `shared/flows-types.ts`
+      (quién lee qué: repositorio → validación → motor → scheduler → export, más las dos
+      invariantes: `position` es solo del editor, cada run congela su `flowSnapshot`) y en
+      `shared/flow-graph.ts` (qué bloquea un run vs. qué es solo warning).
+- [x] **Tests** (46 nuevos): 38 del contrato (19 × 2 backends), 12 de `flow-portable-document`
+      (export sin identidad local, round-trip, nunca `enabled`, nombre de archivo seguro,
+      7 rechazos) y 9 de `flow-document-file-io` (escritura, cancelar, fallo de disco, flujo
+      inexistente, import crea flujo deshabilitado, cancelar, documento ajeno, fallo de lectura).
+
+**Archivos tocados:**
+- Shared: `flow-portable-document.ts` (nuevo, + test), `flows-types.ts` y `flow-graph.ts` (docs)
+- Main: `flows/{sqlite-flow-repository,flow-document-file-io}.ts` (nuevo),
+  `flows/flow-repository-contract.test.ts` (nuevo), `flows/json-flow-repository.test.ts`
+  (eliminado, absorbido por el contrato), `ipc/flows.ts`
+- Preload: `index.ts`, `api-types.ts` (`flows.exportFlow`/`importFlow`)
+- Renderer: `components/flows/{use-flow-document-actions.ts,FlowsPage.tsx,flows-page-parts.tsx}`,
+  `store/slices/flows.ts`, locales (6 claves × 5 idiomas)
+
+**Limitación consciente:** import/export solo existe en el camino IPC del renderer; los métodos RPC
+(`flow.*`) todavía no lo exponen, así que un host remoto/CLI no puede importar un flujo por ahora.
 
 **Entregable:** confianza de que migrar es cambiar una línea de wiring.
 

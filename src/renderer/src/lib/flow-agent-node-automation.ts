@@ -8,7 +8,11 @@ import { getRepoIdFromWorktreeId } from '../../../shared/worktree-id'
  * dispatch coordinator instead of duplicating workspace + terminal handling.
  * These objects are never persisted — they exist only for the dispatch call.
  */
-export function toFlowNodeAutomation(request: FlowNodeDispatchRequest): {
+export function toFlowNodeAutomation(
+  request: FlowNodeDispatchRequest,
+  /** Composed prompt (rules + attached markdown + prompt); defaults to the raw prompt. */
+  resolvedPrompt?: string
+): {
   automation: Automation
   run: AutomationRun
 } | null {
@@ -25,7 +29,7 @@ export function toFlowNodeAutomation(request: FlowNodeDispatchRequest): {
   const automation: Automation = {
     id: `flow:${request.flowId}:${request.nodeId}`,
     name: flowNodeRunTitle(request),
-    prompt: config.prompt,
+    prompt: resolvedPrompt ?? config.prompt,
     precheck: null,
     agentId: config.agentId,
     projectId,

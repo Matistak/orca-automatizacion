@@ -6,6 +6,27 @@ import type {
   AutomationWorkspaceMode
 } from './automations-types'
 
+/**
+ * Data model for node flows — a DAG of actions layered on Orca's automations.
+ * This file is the entry point for the whole feature; the pieces that read it:
+ *
+ * - Storage: `main/flows/flow-repository.ts` is the only boundary anything talks
+ *   to. `JsonFlowRepository` implements it over the JSON store;
+ *   `SqliteFlowRepository` is a spike proving the swap is a wiring change.
+ * - Validation: `shared/flow-graph.ts` (`validateFlowGraph`) — one definition of
+ *   "runnable", shared by the editor banner, the engine and the scheduler.
+ * - Execution: `main/flows/flow-execution-engine.ts` walks the graph and writes a
+ *   FlowNodeRun per node; per-kind side effects live behind FlowNodeDispatcher
+ *   (shell in main, agent via the renderer, or headless in serve mode).
+ * - Scheduling: `main/flows/flow-scheduler-service.ts` derives due occurrences
+ *   from the trigger node (`shared/flow-schedule.ts`) — nothing is persisted.
+ * - Sharing: `shared/flow-portable-document.ts` is the portable export envelope.
+ *
+ * Two invariants hold the design together: `position` is editor-only (the backend
+ * never reads coordinates), and every FlowRun carries a frozen `flowSnapshot` so
+ * history stays interpretable after the flow is edited.
+ */
+
 /** Bump when the on-disk shape of a Flow/FlowRun changes; drives migrateFlow. */
 export const FLOW_SCHEMA_VERSION = 1
 
@@ -25,6 +46,11 @@ export type FlowConditionExpression =
   | { source: 'exit-code'; equals: number }
   | { source: 'output-contains'; substring: string; caseSensitive?: boolean }
 
+export type FlowPromptMarkdownFile = {
+  path: string
+  name: string
+}
+
 /** Discriminated by kind; each variant mirrors an existing automation payload. */
 export type FlowNodeConfig =
   | {
@@ -40,6 +66,11 @@ export type FlowNodeConfig =
       kind: 'agent-prompt'
       agentId: TuiAgent
       prompt: string
+      /** Markdown instruction files attached to the node; their contents are
+       *  inlined into the dispatched prompt at run time. */
+      markdownFiles?: FlowPromptMarkdownFile[]
+      /** Standing rules prepended to the prompt. */
+      rules?: string
       workspaceMode: AutomationWorkspaceMode
       /** Repo the run targets; required when workspaceMode is 'new_per_run'. */
       projectId?: string | null
@@ -128,6 +159,13 @@ export type FlowRunStatus =
 export type FlowRunTrigger = 'scheduled' | 'manual'
 
 /** Per-node result within a run; reuses the automation run vocabulary. */
+/** Lines/files the node left in its workspace, measured when it finished. */
+export type FlowNodeDiffStat = {
+  filesChanged: number
+  insertions: number
+  deletions: number
+}
+
 export type FlowNodeRun = {
   nodeId: string
   status: AutomationRunStatus
@@ -137,6 +175,7 @@ export type FlowNodeRun = {
   /** Frozen so history stays readable after the workspace is deleted. */
   workspaceDisplayName?: string | null
   exitCode?: number | null
+  diffStat?: FlowNodeDiffStat | null
   terminalSessionId: string | null
   terminalPaneKey: string | null
   terminalPtyId: string | null

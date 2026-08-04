@@ -6,6 +6,10 @@ import type {
   FlowSummary,
   FlowUpdateInput
 } from '../../../../shared/flows-types'
+import type {
+  FlowExportOutcome,
+  FlowImportOutcome
+} from '../../../../shared/flow-portable-document'
 import type { AppState } from '../types'
 
 export type FlowSlice = {
@@ -21,6 +25,8 @@ export type FlowSlice = {
   deleteFlow: (id: string) => Promise<void>
   listFlowRuns: (flowId: string, limit?: number) => Promise<FlowRun[]>
   runFlowNow: (flowId: string) => Promise<FlowRun>
+  exportFlow: (id: string) => Promise<FlowExportOutcome>
+  importFlow: () => Promise<FlowImportOutcome>
 }
 
 export const createFlowSlice: StateCreator<AppState, [], [], FlowSlice> = (set) => ({
@@ -60,6 +66,16 @@ export const createFlowSlice: StateCreator<AppState, [], [], FlowSlice> = (set) 
   },
 
   listFlowRuns: async (flowId, limit) => window.api.flows.listRuns({ flowId, limit }),
+
+  exportFlow: async (id) => window.api.flows.exportFlow({ id }),
+
+  importFlow: async () => {
+    const outcome = await window.api.flows.importFlow()
+    if (outcome.status === 'imported') {
+      await refreshFlowSummaries(set)
+    }
+    return outcome
+  },
 
   runFlowNow: async (flowId) => {
     const run = await window.api.flows.runNow({ flowId })

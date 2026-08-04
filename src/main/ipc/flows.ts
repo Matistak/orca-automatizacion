@@ -1,8 +1,14 @@
-import { ipcMain, type WebContents } from 'electron'
+import { BrowserWindow, dialog, ipcMain, type WebContents } from 'electron'
 import type { ClaudeUsageStore } from '../claude-usage/store'
 import type { CodexUsageStore } from '../codex-usage/store'
 import type { Store } from '../persistence'
 import { getFlowServices, initFlowServices } from '../flows/flow-services'
+import {
+  createElectronFlowDocumentFileHost,
+  exportFlowToFile,
+  importFlowFromFile
+} from '../flows/flow-document-file-io'
+import type { FlowExportOutcome, FlowImportOutcome } from '../../shared/flow-portable-document'
 import type {
   Flow,
   FlowCreateInput,
@@ -61,6 +67,31 @@ export function registerFlowHandlers(
   )
   ipcMain.handle('flows:delete', (_event, args: { id: string }): void => {
     repository.deleteFlow(args.id)
+  })
+  // Import/export share the repository, so an imported flow is indistinguishable
+  // from a hand-built one — including for the scheduler.
+  ipcMain.handle(
+    'flows:export',
+    async (event, args: { id: string }): Promise<FlowExportOutcome> =>
+      await exportFlowToFile(repository, args.id, createElectronFlowDocumentFileHost(event.sender))
+  )
+  ipcMain.handle(
+    'flows:import',
+    async (event): Promise<FlowImportOutcome> =>
+      await importFlowFromFile(repository, createElectronFlowDocumentFileHost(event.sender))
+  )
+  // Native dialog: agent nodes attach .md instruction files by absolute path.
+  ipcMain.handle('flows:pickMarkdownFiles', async (event): Promise<string[]> => {
+    // Parented to the requesting window so the sheet is not lost behind the app.
+    const parent = BrowserWindow.fromWebContents(event.sender)
+    const options = {
+      properties: ['openFile', 'multiSelections'] as const,
+      filters: [{ name: 'Markdown', extensions: ['md', 'markdown', 'mdx'] }]
+    }
+    const result = parent
+      ? await dialog.showOpenDialog(parent, { ...options, properties: [...options.properties] })
+      : await dialog.showOpenDialog({ ...options, properties: [...options.properties] })
+    return result.canceled ? [] : result.filePaths
   })
   ipcMain.handle('flows:listRuns', (_event, args: { flowId: string; limit?: number }): FlowRun[] =>
     repository.listRunsByFlow(args.flowId, args.limit)

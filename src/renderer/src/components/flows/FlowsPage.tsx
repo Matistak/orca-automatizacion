@@ -20,7 +20,9 @@ import { createDefaultNodeConfig } from './flow-node-presentation'
 import { FlowsEmptyState, FlowsHeader, ValidationBanner, type SaveState } from './flows-page-parts'
 import { FlowRunHistory } from './FlowRunHistory'
 import { useFlowRuns } from './use-flow-runs'
+import { useFlowDocumentActions } from './use-flow-document-actions'
 import { translate } from '@/i18n/i18n'
+import { cn } from '@/lib/utils'
 
 const AUTOSAVE_DELAY_MS = 700
 
@@ -40,6 +42,7 @@ export default function FlowsPage(): React.JSX.Element {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [saveState, setSaveState] = useState<SaveState>('saved')
   const [historyCollapsed, setHistoryCollapsed] = useState(true)
+  const [flowListCollapsed, setFlowListCollapsed] = useState(false)
   const flowRuns = useFlowRuns(selectedFlowId)
 
   const editingFlowRef = useRef<Flow | null>(null)
@@ -290,6 +293,12 @@ export default function FlowsPage(): React.JSX.Element {
     [closeFlowsPage]
   )
 
+  const documentActions = useFlowDocumentActions({
+    flowId: editingFlow?.id ?? null,
+    flushPendingSave: persist,
+    onImported: setSelectedFlowId
+  })
+
   const validation = useMemo(
     () => (editingFlow ? validateFlowGraph(editingFlow) : null),
     [editingFlow]
@@ -326,15 +335,24 @@ export default function FlowsPage(): React.JSX.Element {
         onRename={(name) => mutateFlow((flow) => ({ ...flow, name }))}
         onToggleEnabled={(enabled) => mutateFlow((flow) => ({ ...flow, enabled }))}
         onCreate={handleCreateFlow}
+        onExport={documentActions.exportFlow}
+        onImport={documentActions.importFlow}
         onDelete={handleDeleteFlow}
         onClose={closeFlowsPage}
       />
       <div className="flex min-h-0 flex-1">
-        <aside className="w-56 shrink-0 border-r border-border">
+        <aside
+          className={cn(
+            'shrink-0 border-r border-border transition-[width] duration-150',
+            flowListCollapsed ? 'w-11' : 'w-56'
+          )}
+        >
           <FlowList
             flows={flowSummaries}
             selectedFlowId={selectedFlowId}
             onSelect={setSelectedFlowId}
+            collapsed={flowListCollapsed}
+            onToggleCollapsed={() => setFlowListCollapsed((current) => !current)}
           />
         </aside>
 
@@ -344,10 +362,8 @@ export default function FlowsPage(): React.JSX.Element {
               <ValidationBanner messages={validation.errors.map((issue) => issue.message)} />
             ) : null}
             <div className="flex min-h-0 flex-1">
-              <aside className="w-52 shrink-0 border-r border-border">
+              <div className="relative min-w-0 flex-1">
                 <NodePalette onAddNode={handleAppendNode} />
-              </aside>
-              <div className="min-w-0 flex-1">
                 <FlowCanvas
                   flow={editingFlow}
                   selectedNodeId={selectedNodeId}
@@ -361,24 +377,16 @@ export default function FlowsPage(): React.JSX.Element {
                   onAddNodeAtPosition={handleAddNode}
                 />
               </div>
-              <aside className="w-72 shrink-0 border-l border-border">
-                {selectedNode ? (
-                  <NodeInspector
-                    key={selectedNode.id}
-                    node={selectedNode}
-                    onConfigChange={(config) => handleConfigChange(selectedNode.id, config)}
-                    onLabelChange={(label) => handleLabelChange(selectedNode.id, label)}
-                    onDelete={() => handleDeleteNode(selectedNode.id)}
-                  />
-                ) : (
-                  <div className="p-3 text-xs text-muted-foreground">
-                    {translate(
-                      'auto.components.flows.FlowsPage.59f683f974',
-                      'Select a node to edit it, or drag one from the palette.'
-                    )}
-                  </div>
-                )}
-              </aside>
+              {selectedNode ? (
+                <NodeInspector
+                  key={selectedNode.id}
+                  node={selectedNode}
+                  onConfigChange={(config) => handleConfigChange(selectedNode.id, config)}
+                  onLabelChange={(label) => handleLabelChange(selectedNode.id, label)}
+                  onDelete={() => handleDeleteNode(selectedNode.id)}
+                  onClose={() => setSelectedNodeId(null)}
+                />
+              ) : null}
             </div>
             <FlowRunHistory
               runs={flowRuns.runs}

@@ -1,5 +1,15 @@
 import React from 'react'
-import { AlertTriangle, Check, Loader2, Play, Plus, Trash2, X } from 'lucide-react'
+import {
+  AlertTriangle,
+  Check,
+  Download,
+  Loader2,
+  Play,
+  Plus,
+  Trash2,
+  Upload,
+  X
+} from 'lucide-react'
 import type { Flow } from '../../../../shared/flows-types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,6 +27,8 @@ export function FlowsHeader({
   onRename,
   onToggleEnabled,
   onCreate,
+  onExport,
+  onImport,
   onDelete,
   onClose
 }: {
@@ -29,6 +41,9 @@ export function FlowsHeader({
   onRename: (name: string) => void
   onToggleEnabled: (enabled: boolean) => void
   onCreate: () => void
+  /** Writes the selected flow to a portable JSON file. */
+  onExport: () => void
+  onImport: () => void
   onDelete: () => void
   onClose: () => void
 }): React.JSX.Element {
@@ -79,6 +94,31 @@ export function FlowsHeader({
           <Plus className="size-4" />
           {translate('auto.components.flows.flows.page.parts.5e7f6d1c63', 'New flow')}
         </Button>
+        <Button
+          type="button"
+          size="icon-sm"
+          variant="ghost"
+          onClick={onImport}
+          title={translate('auto.components.flows.flows.page.parts.2a91c4e70b', 'Import flow')}
+          aria-label={translate('auto.components.flows.flows.page.parts.2a91c4e70b', 'Import flow')}
+        >
+          <Upload className="size-4" />
+        </Button>
+        {flow ? (
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="ghost"
+            onClick={onExport}
+            title={translate('auto.components.flows.flows.page.parts.63b8f2d514', 'Export flow')}
+            aria-label={translate(
+              'auto.components.flows.flows.page.parts.63b8f2d514',
+              'Export flow'
+            )}
+          >
+            <Download className="size-4" />
+          </Button>
+        ) : null}
         {flow ? (
           <Button
             type="button"

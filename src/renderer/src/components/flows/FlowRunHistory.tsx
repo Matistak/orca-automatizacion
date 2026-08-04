@@ -4,6 +4,7 @@ import type { Flow, FlowNodeRun, FlowRun } from '../../../../shared/flows-types'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { getFlowNodeTitle } from './flow-node-presentation'
+import { FlowNodeDiffStat } from './FlowNodeDiffStat'
 import {
   formatFlowRunDuration,
   formatFlowRunTime,
@@ -164,6 +165,9 @@ function RunNodeList({
                 </Button>
               ) : null}
             </div>
+            {nodeRun.diffStat ? (
+              <FlowNodeDiffStat diffStat={nodeRun.diffStat} className="mt-1 text-[11px]" />
+            ) : null}
             {nodeRun.error ? (
               <p className="mt-1 text-[11px] text-destructive">{nodeRun.error}</p>
             ) : null}

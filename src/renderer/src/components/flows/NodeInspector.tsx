@@ -22,9 +22,11 @@ import { useAppStore } from '@/store'
 import { WorkspaceCombobox } from '@/components/automations/WorkspaceCombobox'
 import AutomationProjectCombobox from '@/components/automations/AutomationProjectCombobox'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Field } from '@/components/automations/automation-page-parts'
 import { getFlowNodeKindMeta } from './flow-node-presentation'
 import { FlowScheduleField } from './FlowScheduleField'
+import { AgentInstructionTabs } from './AgentInstructionTabs'
 import { translate } from '@/i18n/i18n'
 
 const FIELD_CONTROL_CLASS = 'border-input bg-input/30 shadow-xs dark:bg-input/30'
@@ -36,47 +38,51 @@ type NodeInspectorProps = {
   onConfigChange: (config: FlowNodeConfig) => void
   onLabelChange: (label: string) => void
   onDelete: () => void
+  onClose: () => void
 }
 
 export function NodeInspector({
   node,
   onConfigChange,
   onLabelChange,
-  onDelete
+  onDelete,
+  onClose
 }: NodeInspectorProps): React.JSX.Element {
   const meta = getFlowNodeKindMeta(node.config.kind)
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
-        <div className="flex items-center gap-2">
-          <meta.icon className="size-4 text-muted-foreground" strokeWidth={1.75} />
-          <span className="text-[13px] font-medium">{meta.title}</span>
-        </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          onClick={onDelete}
-          aria-label={translate('auto.components.flows.NodeInspector.dea86daf79', 'Delete node')}
-          className="text-muted-foreground hover:text-destructive"
-        >
-          <Trash2 className="size-3.5" />
-        </Button>
-      </div>
+    <Dialog open onOpenChange={(open) => (open ? undefined : onClose())}>
+      <DialogContent className="max-h-[80vh] gap-0 overflow-hidden p-0 sm:max-w-md">
+        <DialogHeader className="flex-row items-center justify-between space-y-0 border-b border-border px-4 py-3 pr-12">
+          <DialogTitle className="flex items-center gap-2 text-[13px] font-medium">
+            <meta.icon className="size-4 text-muted-foreground" strokeWidth={1.75} />
+            {meta.title}
+          </DialogTitle>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            onClick={onDelete}
+            aria-label={translate('auto.components.flows.NodeInspector.dea86daf79', 'Delete node')}
+            className="text-muted-foreground hover:text-destructive"
+          >
+            <Trash2 className="size-3.5" />
+          </Button>
+        </DialogHeader>
 
-      <div className="scrollbar-sleek flex-1 space-y-3 overflow-y-auto p-3">
-        <Field label={translate('auto.components.flows.NodeInspector.af4b6c472c', 'Label')}>
-          <Input
-            value={node.label ?? ''}
-            placeholder={meta.title}
-            onChange={(event) => onLabelChange(event.target.value)}
-            className={FIELD_CONTROL_CLASS}
-          />
-        </Field>
-        <NodeConfigFields config={node.config} onConfigChange={onConfigChange} />
-      </div>
-    </div>
+        <div className="scrollbar-sleek max-h-[calc(80vh-3rem)] space-y-3 overflow-y-auto p-4">
+          <Field label={translate('auto.components.flows.NodeInspector.af4b6c472c', 'Label')}>
+            <Input
+              value={node.label ?? ''}
+              placeholder={meta.title}
+              onChange={(event) => onLabelChange(event.target.value)}
+              className={FIELD_CONTROL_CLASS}
+            />
+          </Field>
+          <NodeConfigFields config={node.config} onConfigChange={onConfigChange} />
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -148,16 +154,8 @@ function AgentPromptFields({
           </SelectContent>
         </Select>
       </Field>
-      <Field label={translate('auto.components.flows.NodeInspector.40c692ef3b', 'Prompt')}>
-        <textarea
-          value={config.prompt}
-          placeholder={translate(
-            'auto.components.flows.NodeInspector.d546b22080',
-            'Review the recent changes and summarize any risks.'
-          )}
-          onChange={(event) => onConfigChange({ ...config, prompt: event.target.value })}
-          className={TEXTAREA_CLASS}
-        />
+      <Field label={translate('auto.components.flows.NodeInspector.7b3c1d9e05', 'Instructions')}>
+        <AgentInstructionTabs config={config} onConfigChange={onConfigChange} />
       </Field>
       <Field label={translate('auto.components.flows.NodeInspector.19137dff8d', 'Workspace')}>
         <Select

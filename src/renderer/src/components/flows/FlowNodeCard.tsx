@@ -1,6 +1,6 @@
 import React from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
-import { AlertCircle, Check, Loader2, MinusCircle } from 'lucide-react'
+import { Check, Loader2, MinusCircle, X } from 'lucide-react'
 import type { FlowNode, FlowNodeRun } from '../../../../shared/flows-types'
 import { cn } from '@/lib/utils'
 import { getFlowNodeStatusLabel, getFlowNodeTone, type FlowNodeTone } from './flow-run-presentation'
@@ -9,6 +9,8 @@ import {
   getFlowNodeKindMeta,
   getFlowNodeTitle
 } from './flow-node-presentation'
+import { FlowNodeDiffStat } from './FlowNodeDiffStat'
+import { formatFlowNodeElapsed, formatFlowNodeTokens, useElapsedNow } from './flow-node-run-metrics'
 import { translate } from '@/i18n/i18n'
 
 /** Data carried on each React Flow node; `node` is the domain model. */
@@ -36,11 +38,14 @@ function FlowNodeCardComponent({
   return (
     <div
       className={cn(
-        'w-56 rounded-lg border bg-card text-card-foreground shadow-xs transition-colors',
+        'w-56 rounded-lg border bg-card text-card-foreground shadow-xs transition-[color,background-color,border-color,box-shadow] duration-300',
         selected ? 'border-ring ring-[3px] ring-ring/40' : 'border-border',
         invalid && !selected && 'border-destructive/70',
-        tone === 'running' && !selected && 'border-ring ring-2 ring-ring/30',
-        tone === 'failed' && !selected && 'border-destructive',
+        tone === 'running' && !selected && 'orca-flow-node-running border-status-success',
+        tone === 'completed' && !selected && 'border-status-success-border',
+        tone === 'failed' &&
+          !selected &&
+          'border-destructive bg-destructive/5 shadow-[0_0_16px_-2px_var(--destructive)]',
         tone === 'skipped' && 'opacity-50'
       )}
     >
@@ -55,6 +60,13 @@ function FlowNodeCardComponent({
       </div>
       <div className="border-t border-border/60 px-3 py-2">
         <p className="line-clamp-2 text-[11px] leading-snug text-muted-foreground">{summary}</p>
+        {tone === 'running' ? (
+          <div className="orca-flow-node-progress mt-2 h-0.5 overflow-hidden rounded-full bg-border" />
+        ) : null}
+        {nodeRun?.diffStat ? (
+          <FlowNodeDiffStat diffStat={nodeRun.diffStat} className="mt-1.5" />
+        ) : null}
+        {nodeRun ? <NodeRunMetrics nodeRun={nodeRun} running={tone === 'running'} /> : null}
       </div>
 
       {isCondition ? (
@@ -77,6 +89,23 @@ function FlowNodeCardComponent({
   )
 }
 
+function NodeRunMetrics({
+  nodeRun,
+  running
+}: {
+  nodeRun: FlowNodeRun
+  running: boolean
+}): React.JSX.Element | null {
+  const now = useElapsedNow(running)
+  const parts = [formatFlowNodeTokens(nodeRun), formatFlowNodeElapsed(nodeRun, now)].filter(Boolean)
+  if (parts.length === 0) {
+    return null
+  }
+  return (
+    <p className="mt-1.5 text-[10px] tabular-nums text-muted-foreground/80">{parts.join(' · ')}</p>
+  )
+}
+
 function NodeRunStatusIcon({
   tone,
   status
@@ -95,9 +124,21 @@ function NodeRunStatusIcon({
         />
       )
     case 'completed':
-      return <Check className={cn(className, 'text-muted-foreground')} aria-label={label} />
+      return (
+        <Check
+          className={cn(className, 'animate-in zoom-in-50 duration-300 text-status-success')}
+          aria-label={label}
+        />
+      )
     case 'failed':
-      return <AlertCircle className={cn(className, 'text-destructive')} aria-label={label} />
+      return (
+        <span
+          className="flex size-4 shrink-0 animate-in zoom-in-50 items-center justify-center rounded-sm bg-destructive/20 duration-300"
+          aria-label={label}
+        >
+          <X className="size-3 text-destructive" strokeWidth={2.5} />
+        </span>
+      )
     case 'skipped':
       return <MinusCircle className={cn(className, 'text-muted-foreground')} aria-label={label} />
     case 'idle':

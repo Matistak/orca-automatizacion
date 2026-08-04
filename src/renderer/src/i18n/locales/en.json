@@ -14115,7 +14115,11 @@
           "9927e9a59e": "node",
           "9df10f2520": "Off",
           "6db4910b1b": "No flows yet. Create one to get started.",
-          "3ea7d5c920": "Next"
+          "3ea7d5c920": "Next",
+          "35c0b6c6d4": "Flows",
+          "1fbb4e6563": "Collapse flow list",
+          "18340661f6": "Expand flow list",
+          "d679104f62": "flows"
         },
         "FlowNodeCard": {
           "1bd5a7678e": "false",
@@ -14130,7 +14134,11 @@
           "7838f45ff5": "Failed to create flow",
           "3e20835f66": "Failed to save flow",
           "9a4c17be23": "Workspace is not available.",
-          "4d81f0aa72": "Run terminal is no longer available — opened the workspace instead."
+          "4d81f0aa72": "Run terminal is no longer available — opened the workspace instead.",
+          "b1c4a90d72": "Flow exported",
+          "5d2e7f1a83": "Failed to export flow",
+          "7c0b9e4d15": "Flow imported — review it before enabling.",
+          "a86f3b2c04": "Failed to import flow"
         },
         "NodeInspector": {
           "815ee41877": "handles to the nodes that should run for each outcome.",
@@ -14162,7 +14170,8 @@
           "5a1f3b7c92": "Project",
           "7d2e9a4b10": "Workspace (optional)",
           "8e3f0b5c21": "Leave empty to run in the workspace an earlier node created.",
-          "0a9b8c7d6e": "Fail the flow when the command exits non-zero"
+          "0a9b8c7d6e": "Fail the flow when the command exits non-zero",
+          "7b3c1d9e05": "Instructions"
         },
         "NodePalette": {
           "5204a981d9": "Nodes"
@@ -14207,7 +14216,9 @@
               "2b932e6556": "Enabled",
               "da54929a93": "Flows",
               "9c0b1a2d3e": "Fix the problems listed above before running this flow.",
-              "4f5a6b7c8d": "Run now"
+              "4f5a6b7c8d": "Run now",
+              "2a91c4e70b": "Import flow",
+              "63b8f2d514": "Export flow"
             }
           }
         },
@@ -14228,6 +14239,22 @@
               "4b8e1c0a72": "Failed to run flow"
             }
           }
+        },
+        "AgentInstructionTabs": {
+          "9f1a2b3c40": "Prompt",
+          "9f1a2b3c41": "Files",
+          "9f1a2b3c42": "Rules",
+          "9f1a2b3c43": "Remove file",
+          "9f1a2b3c44": "Attach .md files to send their contents as instructions.",
+          "9f1a2b3c45": "Attach .md files",
+          "9f1a2b3c46": "Never push to main. Always run the test suite before finishing.",
+          "9f1a2b3c47": "Add a prompt or attach at least one .md file.",
+          "9f1a2b3c48": "Could not open the file picker."
+        },
+        "FlowNodeDiffStat": {
+          "5a0c1e7b93": "diff",
+          "d1f4a2c806": "file",
+          "7c9b3e5f20": "files"
         }
       }
     },

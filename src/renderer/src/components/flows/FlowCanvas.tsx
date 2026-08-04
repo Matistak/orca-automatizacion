@@ -19,8 +19,11 @@ import './flow-canvas-theme.css'
 import type { Flow, FlowEdge, FlowNodeKind, FlowNodeRun } from '../../../../shared/flows-types'
 import { FlowNodeCard, type FlowNodeCardData } from './FlowNodeCard'
 import { FLOW_NODE_DRAG_MIME } from './NodePalette'
+import { FlowRunEdge, type FlowRunEdgeData } from './FlowRunEdge'
+import { getFlowEdgeTone } from './flow-edge-run-tone'
 
 const nodeTypes = { flowNode: FlowNodeCard }
+const edgeTypes = { flowEdge: FlowRunEdge }
 const DELETE_KEYS = ['Delete', 'Backspace']
 
 export type FlowCanvasProps = {
@@ -105,13 +108,17 @@ function FlowCanvasInner({
     () =>
       flow.edges.map((edge) => ({
         id: edge.id,
+        type: 'flowEdge',
         source: edge.source,
         target: edge.target,
         sourceHandle: edge.sourceHandle,
-        // Why: labels on a condition's two outputs orient the user without a legend.
-        label: edge.sourceHandle
+        data: {
+          tone: getFlowEdgeTone(edge, nodeRunsByNodeId),
+          // Why: labels on a condition's two outputs orient the user without a legend.
+          branchLabel: edge.sourceHandle
+        } satisfies FlowRunEdgeData
       })),
-    [flow.edges]
+    [flow.edges, nodeRunsByNodeId]
   )
 
   const handleNodesChange = useCallback(
@@ -182,6 +189,7 @@ function FlowCanvasInner({
         nodes={rfNodes}
         edges={rfEdges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodesChange={handleNodesChange}
         onNodeDragStop={handleNodeDragStop}
         onEdgesChange={handleEdgesChange}

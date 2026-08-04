@@ -58,6 +58,48 @@
   fill: currentColor;
 }
 
+/* A node that is working breathes, and its body carries an indeterminate bar —
+ * the agent gives no progress fraction, so the bar only signals liveness. */
+@keyframes orca-flow-node-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--status-success) 32%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--status-success) 12%, transparent);
+  }
+}
+
+.orca-flow-node-running {
+  animation: orca-flow-node-breathe 2s ease-in-out infinite;
+}
+
+@keyframes orca-flow-node-progress {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+.orca-flow-node-progress::after {
+  content: '';
+  display: block;
+  width: 33%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--status-success);
+  animation: orca-flow-node-progress 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orca-flow-node-running,
+  .orca-flow-node-progress::after {
+    animation: none;
+  }
+}
+
 .orca-flow-canvas .react-flow__minimap {
   background: var(--card);
   border: 1px solid var(--border);
